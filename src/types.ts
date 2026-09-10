@@ -45,6 +45,8 @@ export interface Shot {
   matchId: string
   shooterNumber: number
   zone: ShotZone
+  originX?: number
+  originY?: number
   goalX: number
   goalY: number
   result: ShotResult
