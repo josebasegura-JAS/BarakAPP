@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent, MouseEvent as ReactMouseEvent } from 'react'
-import { ArrowLeft, Clock3, Delete, LogOut, Pause, Pencil, Play, Plus, RotateCcw, Save, Shield, Target, Trash2, Undo2, Users, X } from 'lucide-react'
-import type { Goalkeeper, Match, MatchEvent, Rival, Shot, ShotResult, ShotZone, Team } from './types'
+import { ArrowLeft, Delete, LogOut, Pencil, Plus, Save, Shield, Target, Trash2, Undo2, Users, X } from 'lucide-react'
+import type { Goalkeeper, Match, Rival, Shot, ShotResult, ShotZone, Team } from './types'
 import { loadMatches, loadRivals, loadTeams, saveMatches, saveRivals, saveTeams } from './storage'
+import shotCourtImage from './assets/shot-court.png'
 
 type Screen = 'login' | 'teams' | 'team' | 'goalkeepers' | 'new' | 'match'
 
@@ -16,6 +17,8 @@ const zoneLabel: Record<ShotZone, string> = {
   seven_m: '7 m',
 }
 
+const selectableShotZones: ShotZone[] = ['ext_left', 'lat_left', 'central', 'pivot', 'lat_right', 'ext_right']
+
 const resultLabel: Record<ShotResult, string> = {
   goal: 'Gol',
   save: 'Parada',
@@ -23,11 +26,6 @@ const resultLabel: Record<ShotResult, string> = {
   blocked: 'Bloqueo',
 }
 
-function formatClock(total: number) {
-  const mins = Math.floor(total / 60).toString().padStart(2, '0')
-  const secs = Math.floor(total % 60).toString().padStart(2, '0')
-  return `${mins}:${secs}`
-}
 
 function uid() {
   return crypto.randomUUID()
@@ -58,7 +56,7 @@ function App() {
     setScreen('login')
   }
 
-  function createMatch(rivalName: string, venue: 'home' | 'away', periodLengthMinutes: number) {
+  function createMatch(rivalName: string) {
     if (!selectedTeam) return
     let rival = rivals.find(r => r.name.trim().toLowerCase() === rivalName.trim().toLowerCase())
     if (!rival) {
@@ -71,17 +69,8 @@ function App() {
       rivalId: rival.id,
       rivalName: rival.name,
       date: new Date().toISOString().slice(0, 10),
-      venue,
-      status: 'live',
-      period: 1,
-      periodLengthMinutes,
-      clockSeconds: 0,
-      scoreHome: 0,
-      scoreAway: 0,
       goalkeeperId: selectedTeam.goalkeepers[0]?.id ?? '',
-      exclusions: [],
       shots: [],
-      events: [],
     }
     setMatches(prev => [match, ...prev])
     setSelectedMatchId(match.id)
@@ -166,11 +155,11 @@ function Login({ onLogin }: { onLogin: (email: string, password: string) => Prom
 }
 
 function TeamPicker({ teams, onSelect }: { teams: Team[]; onSelect: (id: string) => void }) {
-  return <section className="page"><div className="page-head"><div><div className="eyebrow">Club</div><h1>Selecciona equipo</h1><p>Elige el equipo del que vas a llevar el partido.</p></div></div><div className="team-grid">{teams.map(team => <button key={team.id} className="team-card" onClick={() => onSelect(team.id)}><div className="team-icon"><Users /></div><strong>{team.name}</strong><span>{team.category}</span><small>{team.season}</small></button>)}</div></section>
+  return <section className="page"><div className="page-head"><div><div className="eyebrow">Club</div><h1>Selecciona equipo</h1><p>Elige el equipo del que vas a registrar los lanzamientos.</p></div></div><div className="team-grid">{teams.map(team => <button key={team.id} className="team-card" onClick={() => onSelect(team.id)}><div className="team-icon"><Users /></div><strong>{team.name}</strong><span>{team.category}</span><small>{team.season}</small></button>)}</div></section>
 }
 
 function TeamHome({ team, matches, onBack, onNew, onGoalkeepers, onOpen }: { team: Team; matches: Match[]; onBack: () => void; onNew: () => void; onGoalkeepers: () => void; onOpen: (id: string) => void }) {
-  return <section className="page"><div className="page-head"><div><button className="back-btn" onClick={onBack}><ArrowLeft size={16}/> Equipos</button><div className="eyebrow">{team.season} · {team.category}</div><h1>{team.name}</h1></div><div className="team-head-actions"><button className="ghost-btn" onClick={onGoalkeepers}><Shield size={17}/> Gestionar porteros</button><button className="primary-btn compact" onClick={onNew}><Plus size={17}/> Nuevo partido</button></div></div><div className="stats-strip"><div><span>Porteros</span><strong>{team.goalkeepers.length}</strong></div><div><span>Partidos</span><strong>{matches.length}</strong></div><div><span>Finalizados</span><strong>{matches.filter(m=>m.status==='finished').length}</strong></div></div><section className="panel"><div className="panel-title"><h2>Historial de partidos</h2></div>{matches.length===0 ? <div className="empty">Todavía no hay partidos registrados.</div> : <div className="match-list">{matches.map(m => <button className="match-row" key={m.id} onClick={()=>onOpen(m.id)}><div><strong>{m.rivalName}</strong><span>{m.date} · {m.venue==='home'?'Local':'Visitante'}</span></div><div className="match-score">{m.scoreHome} - {m.scoreAway}</div><span className={`status ${m.status}`}>{m.status==='live'?'En curso':m.status==='finished'?'Finalizado':'Borrador'}</span></button>)}</div>}</section></section>
+  return <section className="page"><div className="page-head"><div><button className="back-btn" onClick={onBack}><ArrowLeft size={16}/> Equipos</button><div className="eyebrow">{team.season} · {team.category}</div><h1>{team.name}</h1></div><div className="team-head-actions"><button className="ghost-btn" onClick={onGoalkeepers}><Shield size={17}/> Gestionar porteros</button><button className="primary-btn compact" onClick={onNew}><Plus size={17}/> Nueva hoja</button></div></div><div className="stats-strip"><div><span>Porteros</span><strong>{team.goalkeepers.length}</strong></div><div><span>Hojas</span><strong>{matches.length}</strong></div><div><span>Lanzamientos</span><strong>{matches.reduce((sum,m)=>sum+m.shots.length,0)}</strong></div></div><section className="panel"><div className="panel-title"><h2>Hojas de lanzamientos</h2></div>{matches.length===0 ? <div className="empty">Todavía no hay hojas de lanzamientos registradas.</div> : <div className="match-list">{matches.map(m => <button className="match-row" key={m.id} onClick={()=>onOpen(m.id)}><div><strong>{m.rivalName}</strong><span>{m.date}</span></div><div className="match-shot-count"><Target size={16}/><strong>{m.shots.length}</strong><span>lanzamientos</span></div></button>)}</div>}</section></section>
 }
 
 function GoalkeeperManager({ team, matches, onBack, onChange }: { team: Team; matches: Match[]; onBack: () => void; onChange: (goalkeepers: Goalkeeper[]) => void }) {
@@ -244,15 +233,12 @@ function GoalkeeperManager({ team, matches, onBack, onChange }: { team: Team; ma
   </section>
 }
 
-function NewMatch({ team, rivals, onBack, onCreate }: { team: Team; rivals: Rival[]; onBack:()=>void; onCreate:(rival:string, venue:'home'|'away', minutes:number)=>void }) {
+function NewMatch({ team, rivals, onBack, onCreate }: { team: Team; rivals: Rival[]; onBack:()=>void; onCreate:(rival:string)=>void }) {
   const [rival, setRival] = useState('')
-  const [venue, setVenue] = useState<'home'|'away'>('home')
-  const [minutes, setMinutes] = useState(30)
-  return <section className="page narrow"><button className="back-btn" onClick={onBack}><ArrowLeft size={16}/> {team.name}</button><div className="eyebrow">Nuevo partido</div><h1>Configurar partido</h1><form className="panel form-grid" onSubmit={e=>{e.preventDefault(); if(rival.trim()) onCreate(rival.trim(), venue, minutes)}}><label>Rival<input value={rival} onChange={e=>setRival(e.target.value)} list="rivals" placeholder="Ej. Romo" required/><datalist id="rivals">{rivals.map(r=><option key={r.id} value={r.name}/>)}</datalist></label><label>Condición<select value={venue} onChange={e=>setVenue(e.target.value as 'home'|'away')}><option value="home">Local</option><option value="away">Visitante</option></select></label><label>Duración de cada parte<select value={minutes} onChange={e=>setMinutes(Number(e.target.value))}><option value={20}>20 min</option><option value={25}>25 min</option><option value={30}>30 min</option></select></label><button className="primary-btn"><Play size={18}/> Crear e iniciar</button></form></section>
+  return <section className="page narrow"><button className="back-btn" onClick={onBack}><ArrowLeft size={16}/> {team.name}</button><div className="eyebrow">Nueva hoja de lanzamientos</div><h1>Seleccionar rival</h1><form className="panel form-grid simplified-new-match" onSubmit={e=>{e.preventDefault(); if(rival.trim()) onCreate(rival.trim())}}><label>Rival<input value={rival} onChange={e=>setRival(e.target.value)} list="rivals" placeholder="Ej. Romo" required/><datalist id="rivals">{rivals.map(r=><option key={r.id} value={r.name}/>)}</datalist></label><button className="primary-btn"><Plus size={18}/> Empezar a registrar</button></form></section>
 }
 
 function LiveMatch({ team, match, onUpdate, onBack }: { team: Team; match: Match; onUpdate:(m:Match)=>void; onBack:()=>void }) {
-  const [running, setRunning] = useState(false)
   const [shooter, setShooter] = useState('')
   const [zone, setZone] = useState<ShotZone>('lat_left')
   const [result, setResult] = useState<ShotResult>('save')
@@ -261,19 +247,6 @@ function LiveMatch({ team, match, onUpdate, onBack }: { team: Team; match: Match
   const [filterShooter, setFilterShooter] = useState('all')
   const [filterZone, setFilterZone] = useState<'all'|ShotZone>('all')
   const [mapMode, setMapMode] = useState<'traces'|'heat'>('traces')
-  const timerRef = useRef<number | null>(null)
-
-  useEffect(() => {
-    if (!running) return
-    timerRef.current = window.setInterval(() => {
-      onUpdate({ ...match, clockSeconds: Math.min(match.clockSeconds + 1, match.periodLengthMinutes * 60) })
-    }, 1000)
-    return () => { if (timerRef.current) window.clearInterval(timerRef.current) }
-  }, [running, match, onUpdate])
-
-  const activeExclusions = match.exclusions
-    .map(ex => ({ ...ex, remaining: Math.max(0, ex.durationSeconds - (match.clockSeconds - ex.startedAtMatchSeconds)) }))
-    .filter(ex => ex.remaining > 0)
 
   const filteredShots = match.shots.filter(s =>
     (filterShooter === 'all' || s.shooterNumber === Number(filterShooter)) &&
@@ -286,76 +259,22 @@ function LiveMatch({ team, match, onUpdate, onBack }: { team: Team; match: Match
   const savePct = onTarget ? Math.round((saves / onTarget) * 100) : 0
   const currentGoalkeeper = team.goalkeepers.find(g => g.id === match.goalkeeperId)
 
-  function addEvent(type: MatchEvent['type'], label: string): MatchEvent {
-    return { id: uid(), type, label, matchSeconds: match.clockSeconds, period: match.period, createdAt: new Date().toISOString() }
-  }
-
-  function score(side:'home'|'away', delta:number) {
-    const next = Math.max(0, side==='home' ? match.scoreHome + delta : match.scoreAway + delta)
-    onUpdate({
-      ...match,
-      [side==='home'?'scoreHome':'scoreAway']: next,
-      events:[addEvent('score', `${side==='home'?team.name:match.rivalName}: ${delta>0?'+1':'-1'} gol`), ...match.events]
-    })
-  }
-
-  function addExclusion(teamSide:'home'|'away') {
-    const raw = prompt(`Dorsal del jugador excluido (${teamSide==='home'?team.name:match.rivalName})`)
-    if(!raw) return
-    const n=Number(raw)
-    if(!Number.isFinite(n)) return
-    onUpdate({
-      ...match,
-      exclusions:[...match.exclusions,{id:uid(),team:teamSide,playerNumber:n,startedAtMatchSeconds:match.clockSeconds,durationSeconds:120}],
-      events:[addEvent('exclusion',`Exclusión 2' · ${teamSide==='home'?team.name:match.rivalName} #${n}`),...match.events]
-    })
-  }
-
-  function addCard(teamSide:'home'|'away') {
-    const raw=prompt(`Dorsal de la tarjeta (${teamSide==='home'?team.name:match.rivalName})`)
-    if(!raw) return
-    const n=Number(raw)
-    if(!Number.isFinite(n)) return
-    onUpdate({...match, events:[addEvent('card',`Tarjeta · ${teamSide==='home'?team.name:match.rivalName} #${n}`),...match.events]})
-  }
-
   function saveShot() {
-    if(!shooter || !goalPoint || !originPoint) return
+    if(!shooter || !goalPoint || !originPoint || !match.goalkeeperId) return
     const shot: Shot={
       id:uid(), matchId:match.id, shooterNumber:Number(shooter), zone,
       originX:originPoint.x, originY:originPoint.y,
       goalX:goalPoint.x, goalY:goalPoint.y, result,
-      goalkeeperId:match.goalkeeperId, matchSeconds:match.clockSeconds, period:match.period
+      goalkeeperId:match.goalkeeperId
     }
-    const homeDelta = match.venue==='away' && result==='goal' ? 1 : 0
-    const awayDelta = match.venue==='home' && result==='goal' ? 1 : 0
-    onUpdate({
-      ...match,
-      shots:[...match.shots,shot],
-      scoreHome:match.scoreHome+homeDelta,
-      scoreAway:match.scoreAway+awayDelta,
-      events:[addEvent('shot',`#${shooter} · ${zoneLabel[zone]} · ${resultLabel[result]}`),...match.events]
-    })
+    onUpdate({ ...match, shots:[...match.shots,shot] })
     setGoalPoint(null)
     setOriginPoint(null)
   }
 
   function undo() {
-    const last=match.events[0]
-    if(!last) return
-    let shots=match.shots, exclusions=match.exclusions, scoreHome=match.scoreHome, scoreAway=match.scoreAway
-    if(last.type==='shot'){
-      const s=[...shots].sort((a,b)=>b.matchSeconds-a.matchSeconds)[0]
-      if(s){
-        shots=shots.filter(x=>x.id!==s.id)
-        if(s.result==='goal'){
-          if(match.venue==='home') scoreAway=Math.max(0,scoreAway-1)
-          else scoreHome=Math.max(0,scoreHome-1)
-        }
-      }
-    }
-    if(last.type==='exclusion') exclusions=exclusions.slice(0,-1)
-    onUpdate({...match,shots,exclusions,scoreHome,scoreAway,events:match.events.slice(1)})
+    if (!match.shots.length) return
+    onUpdate({ ...match, shots: match.shots.slice(0, -1) })
   }
 
   function pickOrigin(point: {x:number;y:number}) {
@@ -377,30 +296,16 @@ function LiveMatch({ team, match, onUpdate, onBack }: { team: Team; match: Match
     setShooter(prev => prev.slice(0, -1))
   }
 
-  return <section className="live-page live-v2">
-    <div className="match-commandbar">
-      <button className="back-btn compact-back" onClick={onBack}><ArrowLeft size={16}/> Partido</button>
-      <div className="match-team left-team"><span>{team.name}</span><strong>{match.scoreHome}</strong><div className="mini-score"><button onClick={()=>score('home',-1)}>-</button><button onClick={()=>score('home',1)}>+</button></div></div>
-      <div className="match-clock-main">
-        <span>{match.period}ª PARTE</span>
-        <strong>{formatClock(match.clockSeconds)}</strong>
-        <div><button className={running?'danger-btn':'primary-btn compact'} onClick={()=>setRunning(!running)}>{running?<><Pause size={15}/> Pausar</>:<><Play size={15}/> Iniciar</>}</button><button className="icon-btn" onClick={()=>onUpdate({...match,clockSeconds:0})} title="Reiniciar tiempo"><RotateCcw size={15}/></button></div>
-        <button className="period-link" onClick={()=>onUpdate({...match,period:match.period===1?2:1,clockSeconds:0})}>Cambiar parte</button>
-      </div>
-      <div className="match-team right-team"><strong>{match.scoreAway}</strong><span>{match.rivalName}</span><div className="mini-score"><button onClick={()=>score('away',-1)}>-</button><button onClick={()=>score('away',1)}>+</button></div></div>
-      <button className="ghost-btn undo-top" onClick={undo}><Undo2 size={16}/> Deshacer</button>
+  return <section className="live-page shots-only-page">
+    <div className="shots-commandbar">
+      <button className="back-btn compact-back" onClick={onBack}><ArrowLeft size={16}/> {team.name}</button>
+      <div className="shots-match-heading"><div className="eyebrow">Hoja de lanzamientos</div><h1>{team.name} · {match.rivalName}</h1><span>{match.date}</span></div>
+      <button className="ghost-btn undo-top" onClick={undo} disabled={!match.shots.length}><Undo2 size={16}/> Deshacer último</button>
     </div>
 
-    <div className="discipline-strip">
-      <div className="active-exclusions">
-        {activeExclusions.length===0 ? <span>Sin exclusiones activas</span> : activeExclusions.map(ex=><div className="exclusion-chip" key={ex.id}><strong>#{ex.playerNumber}</strong><span>{ex.team==='home'?team.name:match.rivalName}</span><b>{formatClock(ex.remaining)}</b></div>)}
-      </div>
-      <div className="discipline-actions"><button onClick={()=>addExclusion('home')}>+ 2' local</button><button onClick={()=>addExclusion('away')}>+ 2' rival</button><button onClick={()=>addCard('home')}>Tarjeta local</button><button onClick={()=>addCard('away')}>Tarjeta rival</button></div>
-    </div>
-
-    <div className="match-dashboard">
-      <aside className="panel left-rail">
-        <div className="rail-title"><Shield size={18}/><h2>Porteros</h2></div>
+    <div className="shots-dashboard">
+      <aside className="panel left-rail shots-left-rail">
+        <div className="rail-title"><Shield size={18}/><h2>Portero</h2></div>
         <div className="goalkeeper-list">
           {team.goalkeepers.map(g=>{
             const gShots=match.shots.filter(s=>s.goalkeeperId===g.id)
@@ -420,9 +325,9 @@ function LiveMatch({ team, match, onUpdate, onBack }: { team: Team; match: Match
         <div className="digit-pad">{shooterDigits.map((digit,index)=><button key={`${digit}-${index}`} type="button" onClick={()=>appendShooterDigit(digit)}>{digit}</button>)}<button type="button" className="digit-action" onClick={removeShooterDigit} disabled={!shooter} title="Borrar último dígito"><Delete size={18}/></button><button type="button" className="digit-action clear" onClick={()=>setShooter('')} disabled={!shooter}>C</button></div>
       </aside>
 
-      <main className="panel visual-stage">
-        <div className="visual-toolbar">
-          <div><div className="eyebrow">Hoja de lanzamientos</div><h2>Origen + destino</h2><p>Toca la pista para marcar el origen y la portería para marcar el destino.</p></div>
+      <main className="panel visual-stage shots-visual-stage">
+        <div className="visual-toolbar shots-visual-toolbar">
+          <div><div className="eyebrow">Registrar lanzamiento</div><h2>Selecciona origen y destino</h2><p>Primero toca el punto de lanzamiento en la pista y después el punto de llegada en la portería.</p></div>
           <div className="view-switch"><button className={mapMode==='traces'?'active':''} onClick={()=>setMapMode('traces')}>Trazas</button><button className={mapMode==='heat'?'active':''} onClick={()=>setMapMode('heat')}>Calor</button></div>
         </div>
 
@@ -435,34 +340,27 @@ function LiveMatch({ team, match, onUpdate, onBack }: { team: Team; match: Match
           onGoalPick={setGoalPoint}
         />
 
-        <div className="draft-summary">
+        <div className="draft-summary shots-draft-summary">
           <div><span>Lanzador</span><strong>{shooter?`#${shooter}`:'—'}</strong></div>
           <div><span>Origen</span><strong>{originPoint?zoneLabel[zone]:'Toca la pista'}</strong></div>
           <div><span>Destino</span><strong>{goalPoint?'Seleccionado':'Toca la portería'}</strong></div>
-          <div><span>Portero</span><strong>{currentGoalkeeper?`#${currentGoalkeeper.number}`:'—'}</strong></div>
+          <div><span>Portero</span><strong>{currentGoalkeeper?`#${currentGoalkeeper.number}`:'Selecciona portero'}</strong></div>
         </div>
 
-        <div className="shot-controls">
-          <label>Zona detectada<select value={zone} onChange={e=>setZone(e.target.value as ShotZone)}>{(Object.keys(zoneLabel) as ShotZone[]).map(z=><option key={z} value={z}>{zoneLabel[z]}</option>)}</select></label>
+        <div className="shot-controls shots-controls">
           <div className="result-inline">{(Object.keys(resultLabel) as ShotResult[]).map(r=><button key={r} className={`${result===r?'selected ':''}${r}`} onClick={()=>setResult(r)}>{resultLabel[r]}</button>)}</div>
-          <button className="primary-btn save-shot" disabled={!shooter||!goalPoint||!originPoint} onClick={saveShot}>Guardar lanzamiento</button>
+          <button className="primary-btn save-shot" disabled={!shooter||!goalPoint||!originPoint||!match.goalkeeperId} onClick={saveShot}>Guardar lanzamiento</button>
         </div>
       </main>
 
-      <aside className="right-rail">
-        <section className="panel filter-panel">
-          <div className="rail-title"><Target size={18}/><h2>Análisis en tiempo real</h2></div>
-          <div className="filters stacked"><label>Jugador<select value={filterShooter} onChange={e=>setFilterShooter(e.target.value)}><option value="all">Todos los jugadores</option>{uniqueShooters.map(n=><option key={n} value={n}>Jugador #{n}</option>)}</select></label><label>Zona de origen<select value={filterZone} onChange={e=>setFilterZone(e.target.value as 'all'|ShotZone)}><option value="all">Todas las zonas</option>{(Object.keys(zoneLabel) as ShotZone[]).map(z=><option key={z} value={z}>{zoneLabel[z]}</option>)}</select></label></div>
-          <button className="reset-filters" onClick={()=>{setFilterShooter('all');setFilterZone('all')}}>Limpiar filtros</button>
-        </section>
-
-        <section className="panel compact-kpis">
+      <aside className="right-rail shots-right-rail">
+        <section className="panel compact-kpis shots-kpis">
           <div><span>Tiros</span><strong>{filteredShots.length}</strong></div><div><span>Goles</span><strong>{goals}</strong></div><div><span>Paradas</span><strong>{saves}</strong></div><div><span>% parada</span><strong>{savePct}%</strong></div>
         </section>
-
-        <section className="panel timeline timeline-v2">
-          <div className="panel-title"><h2><Clock3 size={18}/> Cronología</h2></div>
-          {match.events.length===0?<div className="empty">Aún no hay eventos.</div>:match.events.slice(0,12).map(ev=><div className="event-row" key={ev.id}><span>{formatClock(ev.matchSeconds)}</span><div><strong>{ev.label}</strong><small>{ev.period}ª parte</small></div></div>)}
+        <section className="panel filter-panel">
+          <div className="rail-title"><Target size={18}/><h2>Filtrar lanzamientos</h2></div>
+          <div className="filters stacked"><label>Jugador<select value={filterShooter} onChange={e=>setFilterShooter(e.target.value)}><option value="all">Todos los jugadores</option>{uniqueShooters.map(n=><option key={n} value={n}>Jugador #{n}</option>)}</select></label><label>Zona de origen<select value={filterZone} onChange={e=>setFilterZone(e.target.value as 'all'|ShotZone)}><option value="all">Todas las zonas</option>{selectableShotZones.map(z=><option key={z} value={z}>{zoneLabel[z]}</option>)}</select></label></div>
+          <button className="reset-filters" onClick={()=>{setFilterShooter('all');setFilterZone('all')}}>Limpiar filtros</button>
         </section>
       </aside>
     </div>
@@ -470,8 +368,7 @@ function LiveMatch({ team, match, onUpdate, onBack }: { team: Team; match: Match
 }
 
 function zoneFromOrigin(x:number, y:number): ShotZone {
-  if (y > 41 && y < 58 && x > 43 && x < 57) return 'seven_m'
-  if (y < 34 && x > 34 && x < 66) return 'pivot'
+  if (x > 38 && x < 62 && y < 50) return 'pivot'
   if (x < 18) return 'ext_left'
   if (x < 38) return 'lat_left'
   if (x < 62) return 'central'
@@ -479,18 +376,21 @@ function zoneFromOrigin(x:number, y:number): ShotZone {
   return 'ext_right'
 }
 
+const SHOT_IMAGE = { width: 1338, height: 1176 }
+const SHOT_COURT_RECT = { x: 73, y: 326, w: 1192, h: 850 }
+const SHOT_GOAL_PLANE = { x: 430, y: 121, w: 438, h: 205 }
+
 function shotOriginSvgPoint(shot: Shot) {
   const fallback: Record<ShotZone,{x:number;y:number}> = {
-    ext_left:{x:8,y:54}, lat_left:{x:28,y:57}, central:{x:50,y:63}, lat_right:{x:72,y:57}, ext_right:{x:92,y:54}, pivot:{x:50,y:28}, seven_m:{x:50,y:47}
+    ext_left:{x:9,y:61}, lat_left:{x:29,y:72}, central:{x:50,y:82}, lat_right:{x:71,y:72}, ext_right:{x:91,y:61}, pivot:{x:50,y:48}, seven_m:{x:50,y:48}
   }
   const p = shot.originX == null || shot.originY == null ? fallback[shot.zone] : {x:shot.originX,y:shot.originY}
-  return {x:62+(p.x/100)*576, y:176+(p.y/100)*512}
+  return {x:SHOT_COURT_RECT.x+(p.x/100)*SHOT_COURT_RECT.w, y:SHOT_COURT_RECT.y+(p.y/100)*SHOT_COURT_RECT.h}
 }
 
 function shotGoalSvgPoint(shot: Shot) {
-  return {x:236+(shot.goalX/100)*228, y:56+(shot.goalY/100)*112}
+  return {x:SHOT_GOAL_PLANE.x+(shot.goalX/100)*SHOT_GOAL_PLANE.w, y:SHOT_GOAL_PLANE.y+(shot.goalY/100)*SHOT_GOAL_PLANE.h}
 }
-
 
 function ShotCourt({ shots, draftOrigin, draftGoal, mapMode, onOriginPick, onGoalPick }: {
   shots: Shot[]
@@ -500,148 +400,55 @@ function ShotCourt({ shots, draftOrigin, draftGoal, mapMode, onOriginPick, onGoa
   onOriginPick:(p:{x:number;y:number})=>void
   onGoalPick:(p:{x:number;y:number})=>void
 }) {
-  const courtRect = { x: 62, y: 176, w: 576, h: 512 }
-  const goalPlane = { x: 236, y: 56, w: 228, h: 112 }
-
   function handlePick(e: ReactMouseEvent<SVGSVGElement>) {
     const rect = e.currentTarget.getBoundingClientRect()
-    const sx = ((e.clientX - rect.left) / rect.width) * 700
-    const sy = ((e.clientY - rect.top) / rect.height) * 720
+    const sx = ((e.clientX - rect.left) / rect.width) * SHOT_IMAGE.width
+    const sy = ((e.clientY - rect.top) / rect.height) * SHOT_IMAGE.height
 
-    if (sx >= goalPlane.x && sx <= goalPlane.x + goalPlane.w && sy >= goalPlane.y && sy <= goalPlane.y + goalPlane.h) {
+    if (sx >= SHOT_GOAL_PLANE.x && sx <= SHOT_GOAL_PLANE.x + SHOT_GOAL_PLANE.w && sy >= SHOT_GOAL_PLANE.y && sy <= SHOT_GOAL_PLANE.y + SHOT_GOAL_PLANE.h) {
       onGoalPick({
-        x: Math.max(0, Math.min(100, ((sx - goalPlane.x) / goalPlane.w) * 100)),
-        y: Math.max(0, Math.min(100, ((sy - goalPlane.y) / goalPlane.h) * 100)),
+        x: Math.max(0, Math.min(100, ((sx - SHOT_GOAL_PLANE.x) / SHOT_GOAL_PLANE.w) * 100)),
+        y: Math.max(0, Math.min(100, ((sy - SHOT_GOAL_PLANE.y) / SHOT_GOAL_PLANE.h) * 100)),
       })
       return
     }
 
-    if (sx >= courtRect.x && sx <= courtRect.x + courtRect.w && sy >= courtRect.y && sy <= courtRect.y + courtRect.h) {
+    if (sx >= SHOT_COURT_RECT.x && sx <= SHOT_COURT_RECT.x + SHOT_COURT_RECT.w && sy >= SHOT_COURT_RECT.y && sy <= SHOT_COURT_RECT.y + SHOT_COURT_RECT.h) {
       onOriginPick({
-        x: Math.max(0, Math.min(100, ((sx - courtRect.x) / courtRect.w) * 100)),
-        y: Math.max(0, Math.min(100, ((sy - courtRect.y) / courtRect.h) * 100)),
+        x: Math.max(0, Math.min(100, ((sx - SHOT_COURT_RECT.x) / SHOT_COURT_RECT.w) * 100)),
+        y: Math.max(0, Math.min(100, ((sy - SHOT_COURT_RECT.y) / SHOT_COURT_RECT.h) * 100)),
       })
     }
   }
 
   const draftOriginSvg = draftOrigin
-    ? { x: courtRect.x + (draftOrigin.x / 100) * courtRect.w, y: courtRect.y + (draftOrigin.y / 100) * courtRect.h }
+    ? { x: SHOT_COURT_RECT.x + (draftOrigin.x / 100) * SHOT_COURT_RECT.w, y: SHOT_COURT_RECT.y + (draftOrigin.y / 100) * SHOT_COURT_RECT.h }
     : null
   const draftGoalSvg = draftGoal
-    ? { x: goalPlane.x + (draftGoal.x / 100) * goalPlane.w, y: goalPlane.y + (draftGoal.y / 100) * goalPlane.h }
+    ? { x: SHOT_GOAL_PLANE.x + (draftGoal.x / 100) * SHOT_GOAL_PLANE.w, y: SHOT_GOAL_PLANE.y + (draftGoal.y / 100) * SHOT_GOAL_PLANE.h }
     : null
 
-  return <div className="court-wrap premium-court-wrap">
-    <svg className="court-svg premium-court-svg" viewBox="0 0 700 720" onClick={handlePick} role="img" aria-label="Media pista y portería realista para seleccionar origen y destino del lanzamiento">
+  return <div className="court-wrap photographic-court-wrap">
+    <svg className="court-svg photographic-court-svg" viewBox={`0 0 ${SHOT_IMAGE.width} ${SHOT_IMAGE.height}`} onClick={handlePick} role="img" aria-label="Pista de balonmano para seleccionar origen y destino del lanzamiento">
+      <image href={shotCourtImage} x="0" y="0" width={SHOT_IMAGE.width} height={SHOT_IMAGE.height} preserveAspectRatio="xMidYMid meet" />
       <defs>
-        <linearGradient id="arenaBackdrop" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#090b0d"/>
-          <stop offset="55%" stopColor="#13171b"/>
-          <stop offset="100%" stopColor="#08090b"/>
-        </linearGradient>
-        <linearGradient id="woodBase" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#d1a35b"/>
-          <stop offset="45%" stopColor="#bc8843"/>
-          <stop offset="100%" stopColor="#9a632b"/>
-        </linearGradient>
-        <linearGradient id="floorGlow" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#fff4d8" stopOpacity=".44"/>
-          <stop offset="35%" stopColor="#fff4d8" stopOpacity=".08"/>
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="0"/>
-        </linearGradient>
-        <pattern id="woodStripes" width="28" height="28" patternUnits="userSpaceOnUse">
-          <rect width="28" height="28" fill="transparent"/>
-          <rect width="13" height="28" fill="#ffffff" opacity=".05"/>
-          <rect x="13" width="2" height="28" fill="#7a4d1f" opacity=".35"/>
-          <rect x="15" width="13" height="28" fill="#7f5425" opacity=".18"/>
-        </pattern>
-        <linearGradient id="tubeLight" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#ffffff"/>
-          <stop offset="100%" stopColor="#d8dde3"/>
-        </linearGradient>
-        <linearGradient id="netShade" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#cfd7df" stopOpacity=".95"/>
-          <stop offset="100%" stopColor="#84909b" stopOpacity=".42"/>
-        </linearGradient>
-        <radialGradient id="goalShadow" cx="50%" cy="35%" r="70%">
-          <stop offset="0%" stopColor="#000000" stopOpacity=".30"/>
-          <stop offset="100%" stopColor="#000000" stopOpacity="0"/>
-        </radialGradient>
         <radialGradient id="shotGlow"><stop offset="0" stopColor="currentColor" stopOpacity=".52"/><stop offset="1" stopColor="currentColor" stopOpacity="0"/></radialGradient>
-        <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="8" stdDeviation="10" floodColor="#000000" floodOpacity=".35"/>
-        </filter>
       </defs>
-
-      <rect x="0" y="0" width="700" height="720" rx="18" fill="url(#arenaBackdrop)"/>
-      <rect x="48" y="14" width="604" height="692" rx="20" className="arena-frame"/>
-      <rect x={courtRect.x} y={courtRect.y} width={courtRect.w} height={courtRect.h} rx="8" fill="url(#woodBase)"/>
-      <rect x={courtRect.x} y={courtRect.y} width={courtRect.w} height={courtRect.h} rx="8" fill="url(#woodStripes)" opacity=".95"/>
-      <rect x={courtRect.x} y={courtRect.y} width={courtRect.w} height={courtRect.h} rx="8" fill="url(#floorGlow)"/>
-      <ellipse cx="350" cy="175" rx="190" ry="54" fill="url(#goalShadow)" className="goal-floor-shadow"/>
-
-      <path d="M 248 34 L 452 34 L 464 56 L 236 56 Z" className="goal-back-frame" filter="url(#softShadow)"/>
-      <path d="M 248 34 L 248 146 L 236 168 L 236 56 Z" className="goal-side-depth"/>
-      <path d="M 452 34 L 452 146 L 464 168 L 464 56 Z" className="goal-side-depth"/>
-      <path d="M 248 146 L 452 146 L 464 168 L 236 168 Z" className="goal-floor-depth"/>
-
-      {Array.from({ length: 10 }).map((_, index) => {
-        const fx = 236 + index * 22.8
-        const bx = 248 + index * 20.4
-        return <line key={`net-v-${index}`} x1={fx} y1="56" x2={bx} y2="146" className="goal-net-line" />
-      })}
-      {Array.from({ length: 7 }).map((_, index) => {
-        const yFront = 56 + index * 18.7
-        const yBack = 34 + index * 18.7
-        return <polyline key={`net-h-${index}`} points={`236,${yFront} 464,${yFront} 452,${yBack} 248,${yBack} 236,${yFront}`} className="goal-net-line" />
-      })}
-
-      <rect x="236" y="56" width="228" height="112" fill="rgba(255,255,255,0.04)"/>
-      <rect x="236" y="56" width="228" height="112" className="goal-front-frame"/>
-
-      {Array.from({ length: 5 }).map((_, index) => (
-        <rect key={`left-post-${index}`} x="236" y={56 + index * 22.4} width="10" height="11.2" className="goal-band" />
-      ))}
-      {Array.from({ length: 5 }).map((_, index) => (
-        <rect key={`right-post-${index}`} x="454" y={56 + index * 22.4} width="10" height="11.2" className="goal-band" />
-      ))}
-      {Array.from({ length: 7 }).map((_, index) => (
-        <rect key={`cross-band-${index}`} x={252 + index * 28} y="56" width="14" height="10" className="goal-band" />
-      ))}
-
-      <line x1="312" y1="56" x2="312" y2="168" className="goal-grid"/>
-      <line x1="388" y1="56" x2="388" y2="168" className="goal-grid"/>
-      <line x1="236" y1="93" x2="464" y2="93" className="goal-grid"/>
-      <line x1="236" y1="131" x2="464" y2="131" className="goal-grid"/>
-
-      <path d={`M ${courtRect.x} ${courtRect.y} L ${courtRect.x + courtRect.w} ${courtRect.y} L ${courtRect.x + courtRect.w} ${courtRect.y + courtRect.h} L ${courtRect.x} ${courtRect.y + courtRect.h} Z`} className="court-outline"/>
-      <path d="M107 176 Q124 348 350 348 Q576 348 593 176" className="court-area-six"/>
-      <path d="M74 176 Q105 438 350 438 Q595 438 626 176" className="court-area-nine"/>
-      <line x1="306" y1="417" x2="394" y2="417" className="seven-line realistic"/>
-      <circle cx="350" cy="507" r="2.8" className="court-spot"/>
-      <text x="350" y="410" textAnchor="middle" className="court-label realistic">7 m</text>
-      <text x="87" y="559" className="zone-caption">Extremo izq.</text>
-      <text x="194" y="592" className="zone-caption">Lateral izq.</text>
-      <text x="350" y="625" textAnchor="middle" className="zone-caption">Central</text>
-      <text x="507" y="592" className="zone-caption">Lateral der.</text>
-      <text x="613" y="559" textAnchor="end" className="zone-caption">Extremo der.</text>
-      <text x="350" y="320" textAnchor="middle" className="zone-caption">Pivote</text>
-      <text x="350" y="699" textAnchor="middle" className="attack-direction">Dirección de ataque ↑</text>
 
       {shots.map(s => {
         const o = shotOriginSvgPoint(s)
         const g = shotGoalSvgPoint(s)
         return <g key={s.id} className={`court-shot ${s.result}`}>
           {mapMode === 'traces' && <line x1={o.x} y1={o.y} x2={g.x} y2={g.y} className="shot-trace" />}
-          {mapMode === 'heat' && <><circle cx={o.x} cy={o.y} r="44" className="heat-origin"/><circle cx={g.x} cy={g.y} r="30" className="heat-target"/></>}
-          <circle cx={o.x} cy={o.y} r="7" className="origin-dot"/>
-          <circle cx={g.x} cy={g.y} r="6" className="target-dot"/>
-          <text x={o.x + 10} y={o.y - 9} className="court-shot-number">#{s.shooterNumber}</text>
+          {mapMode === 'heat' && <><circle cx={o.x} cy={o.y} r="70" className="heat-origin"/><circle cx={g.x} cy={g.y} r="48" className="heat-target"/></>}
+          <circle cx={o.x} cy={o.y} r="12" className="origin-dot"/>
+          <circle cx={g.x} cy={g.y} r="10" className="target-dot"/>
+          <text x={o.x + 17} y={o.y - 15} className="court-shot-number">#{s.shooterNumber}</text>
         </g>
       })}
 
-      {draftOriginSvg && <g className="draft-marker"><circle cx={draftOriginSvg.x} cy={draftOriginSvg.y} r="12"/><text x={draftOriginSvg.x + 16} y={draftOriginSvg.y - 12}>ORIGEN</text></g>}
-      {draftGoalSvg && <g className="draft-marker goal-draft"><circle cx={draftGoalSvg.x} cy={draftGoalSvg.y} r="10"/><text x={draftGoalSvg.x + 14} y={draftGoalSvg.y - 10}>DESTINO</text></g>}
+      {draftOriginSvg && <g className="draft-marker"><circle cx={draftOriginSvg.x} cy={draftOriginSvg.y} r="18"/><text x={draftOriginSvg.x + 25} y={draftOriginSvg.y - 19}>ORIGEN</text></g>}
+      {draftGoalSvg && <g className="draft-marker goal-draft"><circle cx={draftGoalSvg.x} cy={draftGoalSvg.y} r="16"/><text x={draftGoalSvg.x + 22} y={draftGoalSvg.y - 17}>DESTINO</text></g>}
       {draftOriginSvg && draftGoalSvg && <line x1={draftOriginSvg.x} y1={draftOriginSvg.y} x2={draftGoalSvg.x} y2={draftGoalSvg.y} className="draft-trace"/>}
     </svg>
     <div className="court-legend"><span><i className="legend-dot save"></i>Parada</span><span><i className="legend-dot goal"></i>Gol</span><span><i className="legend-dot post_out"></i>Fuera/Poste</span><span><i className="legend-dot blocked"></i>Bloqueo</span></div>

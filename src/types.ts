@@ -31,15 +31,6 @@ export interface Rival {
   name: string
 }
 
-export interface Exclusion {
-  id: string
-  team: 'home' | 'away'
-  playerNumber: number
-  playerName?: string
-  startedAtMatchSeconds: number
-  durationSeconds: number
-}
-
 export interface Shot {
   id: string
   matchId: string
@@ -51,17 +42,6 @@ export interface Shot {
   goalY: number
   result: ShotResult
   goalkeeperId: string
-  matchSeconds: number
-  period: 1 | 2
-}
-
-export interface MatchEvent {
-  id: string
-  type: 'shot' | 'score' | 'exclusion' | 'card' | 'note'
-  label: string
-  matchSeconds: number
-  period: 1 | 2
-  createdAt: string
 }
 
 export interface Match {
@@ -70,15 +50,6 @@ export interface Match {
   rivalId: string
   rivalName: string
   date: string
-  venue: 'home' | 'away'
-  status: 'draft' | 'live' | 'finished'
-  period: 1 | 2
-  periodLengthMinutes: number
-  clockSeconds: number
-  scoreHome: number
-  scoreAway: number
   goalkeeperId: string
-  exclusions: Exclusion[]
   shots: Shot[]
-  events: MatchEvent[]
 }
