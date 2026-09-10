@@ -16,6 +16,10 @@ export function loadTeams(): Team[] {
   return JSON.parse(raw) as Team[]
 }
 
+export function saveTeams(teams: Team[]) {
+  localStorage.setItem(KEYS.teams, JSON.stringify(teams))
+}
+
 export function loadMatches(): Match[] {
   const raw = localStorage.getItem(KEYS.matches)
   return raw ? (JSON.parse(raw) as Match[]) : []

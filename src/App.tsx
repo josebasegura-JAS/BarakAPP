@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import type { MouseEvent as ReactMouseEvent } from 'react'
-import { ArrowLeft, Clock3, LogOut, Pause, Play, Plus, RotateCcw, Shield, Target, Undo2, Users } from 'lucide-react'
-import type { Match, MatchEvent, Rival, Shot, ShotResult, ShotZone, Team } from './types'
-import { loadMatches, loadRivals, loadTeams, saveMatches, saveRivals } from './storage'
+import type { FormEvent, MouseEvent as ReactMouseEvent } from 'react'
+import { ArrowLeft, Clock3, Delete, LogOut, Pause, Pencil, Play, Plus, RotateCcw, Save, Shield, Target, Trash2, Undo2, Users, X } from 'lucide-react'
+import type { Goalkeeper, Match, MatchEvent, Rival, Shot, ShotResult, ShotZone, Team } from './types'
+import { loadMatches, loadRivals, loadTeams, saveMatches, saveRivals, saveTeams } from './storage'
 
-type Screen = 'login' | 'teams' | 'team' | 'new' | 'match'
+type Screen = 'login' | 'teams' | 'team' | 'goalkeepers' | 'new' | 'match'
 
 const zoneLabel: Record<ShotZone, string> = {
   ext_left: 'Extremo izq.',
@@ -35,13 +35,14 @@ function uid() {
 
 function App() {
   const [screen, setScreen] = useState<Screen>('login')
-  const [teams] = useState<Team[]>(() => loadTeams())
+  const [teams, setTeams] = useState<Team[]>(() => loadTeams())
   const [matches, setMatches] = useState<Match[]>(() => loadMatches())
   const [rivals, setRivals] = useState<Rival[]>(() => loadRivals())
   const [selectedTeamId, setSelectedTeamId] = useState<string>('')
   const [selectedMatchId, setSelectedMatchId] = useState<string>('')
   const [demoUser, setDemoUser] = useState('demo@barakapp.local')
 
+  useEffect(() => saveTeams(teams), [teams])
   useEffect(() => saveMatches(matches), [matches])
   useEffect(() => saveRivals(rivals), [rivals])
 
@@ -116,7 +117,16 @@ function App() {
             matches={matches.filter(m => m.teamId === selectedTeam.id)}
             onBack={() => setScreen('teams')}
             onNew={() => setScreen('new')}
+            onGoalkeepers={() => setScreen('goalkeepers')}
             onOpen={(id) => { setSelectedMatchId(id); setScreen('match') }}
+          />
+        )}
+        {screen === 'goalkeepers' && selectedTeam && (
+          <GoalkeeperManager
+            team={selectedTeam}
+            matches={matches.filter(m => m.teamId === selectedTeam.id)}
+            onBack={() => setScreen('team')}
+            onChange={(goalkeepers) => setTeams(prev => prev.map(t => t.id === selectedTeam.id ? { ...t, goalkeepers } : t))}
           />
         )}
         {screen === 'new' && selectedTeam && (
@@ -159,8 +169,79 @@ function TeamPicker({ teams, onSelect }: { teams: Team[]; onSelect: (id: string)
   return <section className="page"><div className="page-head"><div><div className="eyebrow">Club</div><h1>Selecciona equipo</h1><p>Elige el equipo del que vas a llevar el partido.</p></div></div><div className="team-grid">{teams.map(team => <button key={team.id} className="team-card" onClick={() => onSelect(team.id)}><div className="team-icon"><Users /></div><strong>{team.name}</strong><span>{team.category}</span><small>{team.season}</small></button>)}</div></section>
 }
 
-function TeamHome({ team, matches, onBack, onNew, onOpen }: { team: Team; matches: Match[]; onBack: () => void; onNew: () => void; onOpen: (id: string) => void }) {
-  return <section className="page"><div className="page-head"><div><button className="back-btn" onClick={onBack}><ArrowLeft size={16}/> Equipos</button><div className="eyebrow">{team.season} · {team.category}</div><h1>{team.name}</h1></div><button className="primary-btn compact" onClick={onNew}><Plus size={17}/> Nuevo partido</button></div><div className="stats-strip"><div><span>Porteros</span><strong>{team.goalkeepers.length}</strong></div><div><span>Partidos</span><strong>{matches.length}</strong></div><div><span>Finalizados</span><strong>{matches.filter(m=>m.status==='finished').length}</strong></div></div><section className="panel"><div className="panel-title"><h2>Historial de partidos</h2></div>{matches.length===0 ? <div className="empty">Todavía no hay partidos registrados.</div> : <div className="match-list">{matches.map(m => <button className="match-row" key={m.id} onClick={()=>onOpen(m.id)}><div><strong>{m.rivalName}</strong><span>{m.date} · {m.venue==='home'?'Local':'Visitante'}</span></div><div className="match-score">{m.scoreHome} - {m.scoreAway}</div><span className={`status ${m.status}`}>{m.status==='live'?'En curso':m.status==='finished'?'Finalizado':'Borrador'}</span></button>)}</div>}</section></section>
+function TeamHome({ team, matches, onBack, onNew, onGoalkeepers, onOpen }: { team: Team; matches: Match[]; onBack: () => void; onNew: () => void; onGoalkeepers: () => void; onOpen: (id: string) => void }) {
+  return <section className="page"><div className="page-head"><div><button className="back-btn" onClick={onBack}><ArrowLeft size={16}/> Equipos</button><div className="eyebrow">{team.season} · {team.category}</div><h1>{team.name}</h1></div><div className="team-head-actions"><button className="ghost-btn" onClick={onGoalkeepers}><Shield size={17}/> Gestionar porteros</button><button className="primary-btn compact" onClick={onNew}><Plus size={17}/> Nuevo partido</button></div></div><div className="stats-strip"><div><span>Porteros</span><strong>{team.goalkeepers.length}</strong></div><div><span>Partidos</span><strong>{matches.length}</strong></div><div><span>Finalizados</span><strong>{matches.filter(m=>m.status==='finished').length}</strong></div></div><section className="panel"><div className="panel-title"><h2>Historial de partidos</h2></div>{matches.length===0 ? <div className="empty">Todavía no hay partidos registrados.</div> : <div className="match-list">{matches.map(m => <button className="match-row" key={m.id} onClick={()=>onOpen(m.id)}><div><strong>{m.rivalName}</strong><span>{m.date} · {m.venue==='home'?'Local':'Visitante'}</span></div><div className="match-score">{m.scoreHome} - {m.scoreAway}</div><span className={`status ${m.status}`}>{m.status==='live'?'En curso':m.status==='finished'?'Finalizado':'Borrador'}</span></button>)}</div>}</section></section>
+}
+
+function GoalkeeperManager({ team, matches, onBack, onChange }: { team: Team; matches: Match[]; onBack: () => void; onChange: (goalkeepers: Goalkeeper[]) => void }) {
+  const [name, setName] = useState('')
+  const [number, setNumber] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [message, setMessage] = useState('')
+
+  function resetForm() {
+    setName('')
+    setNumber('')
+    setEditingId(null)
+    setMessage('')
+  }
+
+  function submit(e: FormEvent) {
+    e.preventDefault()
+    const cleanName = name.trim()
+    const parsedNumber = Number(number)
+    if (!cleanName || !Number.isInteger(parsedNumber) || parsedNumber < 0 || parsedNumber > 99) {
+      setMessage('Indica un nombre y un dorsal entre 0 y 99.')
+      return
+    }
+    const duplicated = team.goalkeepers.some(g => g.number === parsedNumber && g.id !== editingId)
+    if (duplicated) {
+      setMessage(`El dorsal ${parsedNumber} ya está asignado a otro portero de este equipo.`)
+      return
+    }
+    if (editingId) {
+      onChange(team.goalkeepers.map(g => g.id === editingId ? { ...g, name: cleanName, number: parsedNumber } : g))
+    } else {
+      onChange([...team.goalkeepers, { id: uid(), name: cleanName, number: parsedNumber }].sort((a,b)=>a.number-b.number))
+    }
+    resetForm()
+  }
+
+  function edit(goalkeeper: Goalkeeper) {
+    setEditingId(goalkeeper.id)
+    setName(goalkeeper.name)
+    setNumber(String(goalkeeper.number))
+    setMessage('')
+  }
+
+  function remove(goalkeeper: Goalkeeper) {
+    const used = matches.some(m => m.goalkeeperId === goalkeeper.id || m.shots.some(s => s.goalkeeperId === goalkeeper.id))
+    if (used) {
+      setMessage(`No se puede eliminar a ${goalkeeper.name}: ya tiene datos asociados en uno o más partidos.`)
+      return
+    }
+    if (!confirm(`¿Eliminar al portero #${goalkeeper.number} ${goalkeeper.name}?`)) return
+    onChange(team.goalkeepers.filter(g => g.id !== goalkeeper.id))
+    if (editingId === goalkeeper.id) resetForm()
+  }
+
+  return <section className="page goalkeeper-admin">
+    <button className="back-btn" onClick={onBack}><ArrowLeft size={16}/> {team.name}</button>
+    <div className="page-head goalkeeper-admin-head"><div><div className="eyebrow">{team.season} · {team.category}</div><h1>Porteros de {team.name}</h1><p>Estos porteros estarán disponibles automáticamente al crear o abrir partidos de este equipo.</p></div></div>
+    <div className="goalkeeper-admin-grid">
+      <section className="panel">
+        <div className="panel-title"><h2><Shield size={18}/> Plantilla de porteros</h2><span className="count-badge">{team.goalkeepers.length}</span></div>
+        {team.goalkeepers.length === 0 ? <div className="empty">No hay porteros dados de alta.</div> : <div className="admin-gk-list">{team.goalkeepers.map(g => <div className="admin-gk-row" key={g.id}><span className="admin-gk-number">{g.number}</span><div><strong>{g.name}</strong><small>Dorsal {g.number}</small></div><div className="admin-gk-actions"><button className="icon-btn" onClick={()=>edit(g)} title="Editar portero"><Pencil size={16}/></button><button className="icon-btn danger-icon" onClick={()=>remove(g)} title="Eliminar portero"><Trash2 size={16}/></button></div></div>)}</div>}
+      </section>
+      <form className="panel gk-form" onSubmit={submit}>
+        <div className="panel-title"><h2>{editingId ? <><Pencil size={18}/> Editar portero</> : <><Plus size={18}/> Alta de portero</>}</h2></div>
+        <label>Nombre del portero<input value={name} onChange={e=>setName(e.target.value)} placeholder="Ej. A. Gómez" autoFocus /></label>
+        <label>Dorsal<input value={number} onChange={e=>setNumber(e.target.value.replace(/\D/g,'').slice(0,2))} inputMode="numeric" placeholder="Ej. 1" /></label>
+        {message && <div className="form-message">{message}</div>}
+        <div className="gk-form-actions"><button className="primary-btn" type="submit"><Save size={17}/>{editingId?'Guardar cambios':'Dar de alta'}</button>{editingId && <button className="ghost-btn" type="button" onClick={resetForm}><X size={17}/>Cancelar</button>}</div>
+      </form>
+    </div>
+  </section>
 }
 
 function NewMatch({ team, rivals, onBack, onCreate }: { team: Team; rivals: Rival[]; onBack:()=>void; onCreate:(rival:string, venue:'home'|'away', minutes:number)=>void }) {
@@ -282,7 +363,19 @@ function LiveMatch({ team, match, onUpdate, onBack }: { team: Team; match: Match
     setZone(zoneFromOrigin(point.x, point.y))
   }
 
-  const shooterButtons = Array.from({length:16}, (_,i)=>i+1)
+  const shooterDigits = [1,2,3,4,5,6,7,8,9,0]
+
+  function appendShooterDigit(digit: number) {
+    setShooter(prev => {
+      if (prev.length >= 2) return prev
+      const next = `${prev}${digit}`
+      return String(Math.min(99, Number(next)))
+    })
+  }
+
+  function removeShooterDigit() {
+    setShooter(prev => prev.slice(0, -1))
+  }
 
   return <section className="live-page live-v2">
     <div className="match-commandbar">
@@ -322,10 +415,9 @@ function LiveMatch({ team, match, onUpdate, onBack }: { team: Team; match: Match
         </div>
 
         <div className="rail-divider" />
-        <div className="rail-tabs"><button className="active">Lanzador</button><button disabled>Nº rival</button></div>
-        <input className="shooter-input" value={shooter} onChange={e=>setShooter(e.target.value.replace(/\D/g,'').slice(0,2))} inputMode="numeric" placeholder="Dorsal obligatorio"/>
-        <div className="number-pad">{shooterButtons.map(n=><button key={n} className={shooter===String(n)?'selected':''} onClick={()=>setShooter(String(n))}>{n}</button>)}</div>
-        <button className="clear-shooter" onClick={()=>setShooter('')}>Limpiar dorsal</button>
+        <div className="shooter-section-title"><span>Lanzador rival</span><small>Dorsal obligatorio · sin alta previa</small></div>
+        <div className="shooter-display"><span>#</span><strong>{shooter || '—'}</strong></div>
+        <div className="digit-pad">{shooterDigits.map((digit,index)=><button key={`${digit}-${index}`} type="button" onClick={()=>appendShooterDigit(digit)}>{digit}</button>)}<button type="button" className="digit-action" onClick={removeShooterDigit} disabled={!shooter} title="Borrar último dígito"><Delete size={18}/></button><button type="button" className="digit-action clear" onClick={()=>setShooter('')} disabled={!shooter}>C</button></div>
       </aside>
 
       <main className="panel visual-stage">
