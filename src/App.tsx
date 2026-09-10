@@ -481,15 +481,16 @@ function zoneFromOrigin(x:number, y:number): ShotZone {
 
 function shotOriginSvgPoint(shot: Shot) {
   const fallback: Record<ShotZone,{x:number;y:number}> = {
-    ext_left:{x:10,y:54}, lat_left:{x:28,y:56}, central:{x:50,y:62}, lat_right:{x:72,y:56}, ext_right:{x:90,y:54}, pivot:{x:50,y:27}, seven_m:{x:50,y:49}
+    ext_left:{x:8,y:54}, lat_left:{x:28,y:57}, central:{x:50,y:63}, lat_right:{x:72,y:57}, ext_right:{x:92,y:54}, pivot:{x:50,y:28}, seven_m:{x:50,y:47}
   }
   const p = shot.originX == null || shot.originY == null ? fallback[shot.zone] : {x:shot.originX,y:shot.originY}
-  return {x:60+(p.x/100)*580, y:175+(p.y/100)*500}
+  return {x:62+(p.x/100)*576, y:176+(p.y/100)*512}
 }
 
 function shotGoalSvgPoint(shot: Shot) {
-  return {x:235+(shot.goalX/100)*230, y:40+(shot.goalY/100)*115}
+  return {x:236+(shot.goalX/100)*228, y:56+(shot.goalY/100)*112}
 }
+
 
 function ShotCourt({ shots, draftOrigin, draftGoal, mapMode, onOriginPick, onGoalPick }: {
   shots: Shot[]
@@ -499,53 +500,153 @@ function ShotCourt({ shots, draftOrigin, draftGoal, mapMode, onOriginPick, onGoa
   onOriginPick:(p:{x:number;y:number})=>void
   onGoalPick:(p:{x:number;y:number})=>void
 }) {
+  const courtRect = { x: 62, y: 176, w: 576, h: 512 }
+  const goalPlane = { x: 236, y: 56, w: 228, h: 112 }
+
   function handlePick(e: ReactMouseEvent<SVGSVGElement>) {
-    const rect=e.currentTarget.getBoundingClientRect()
-    const sx=((e.clientX-rect.left)/rect.width)*700
-    const sy=((e.clientY-rect.top)/rect.height)*720
-    if (sx>=225 && sx<=475 && sy>=28 && sy<=170) {
-      onGoalPick({x:Math.max(0,Math.min(100,((sx-235)/230)*100)), y:Math.max(0,Math.min(100,((sy-40)/115)*100))})
+    const rect = e.currentTarget.getBoundingClientRect()
+    const sx = ((e.clientX - rect.left) / rect.width) * 700
+    const sy = ((e.clientY - rect.top) / rect.height) * 720
+
+    if (sx >= goalPlane.x && sx <= goalPlane.x + goalPlane.w && sy >= goalPlane.y && sy <= goalPlane.y + goalPlane.h) {
+      onGoalPick({
+        x: Math.max(0, Math.min(100, ((sx - goalPlane.x) / goalPlane.w) * 100)),
+        y: Math.max(0, Math.min(100, ((sy - goalPlane.y) / goalPlane.h) * 100)),
+      })
       return
     }
-    if (sx>=60 && sx<=640 && sy>=175 && sy<=690) {
-      onOriginPick({x:Math.max(0,Math.min(100,((sx-60)/580)*100)), y:Math.max(0,Math.min(100,((sy-175)/500)*100))})
+
+    if (sx >= courtRect.x && sx <= courtRect.x + courtRect.w && sy >= courtRect.y && sy <= courtRect.y + courtRect.h) {
+      onOriginPick({
+        x: Math.max(0, Math.min(100, ((sx - courtRect.x) / courtRect.w) * 100)),
+        y: Math.max(0, Math.min(100, ((sy - courtRect.y) / courtRect.h) * 100)),
+      })
     }
   }
 
-  const draftOriginSvg = draftOrigin ? {x:60+(draftOrigin.x/100)*580,y:175+(draftOrigin.y/100)*500} : null
-  const draftGoalSvg = draftGoal ? {x:235+(draftGoal.x/100)*230,y:40+(draftGoal.y/100)*115} : null
+  const draftOriginSvg = draftOrigin
+    ? { x: courtRect.x + (draftOrigin.x / 100) * courtRect.w, y: courtRect.y + (draftOrigin.y / 100) * courtRect.h }
+    : null
+  const draftGoalSvg = draftGoal
+    ? { x: goalPlane.x + (draftGoal.x / 100) * goalPlane.w, y: goalPlane.y + (draftGoal.y / 100) * goalPlane.h }
+    : null
 
-  return <div className="court-wrap">
-    <svg className="court-svg" viewBox="0 0 700 720" onClick={handlePick} role="img" aria-label="Media pista y portería para seleccionar origen y destino del lanzamiento">
+  return <div className="court-wrap premium-court-wrap">
+    <svg className="court-svg premium-court-svg" viewBox="0 0 700 720" onClick={handlePick} role="img" aria-label="Media pista y portería realista para seleccionar origen y destino del lanzamiento">
       <defs>
-        <radialGradient id="shotGlow"><stop offset="0" stopColor="currentColor" stopOpacity=".55"/><stop offset="1" stopColor="currentColor" stopOpacity="0"/></radialGradient>
+        <linearGradient id="arenaBackdrop" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#090b0d"/>
+          <stop offset="55%" stopColor="#13171b"/>
+          <stop offset="100%" stopColor="#08090b"/>
+        </linearGradient>
+        <linearGradient id="woodBase" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#d1a35b"/>
+          <stop offset="45%" stopColor="#bc8843"/>
+          <stop offset="100%" stopColor="#9a632b"/>
+        </linearGradient>
+        <linearGradient id="floorGlow" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#fff4d8" stopOpacity=".44"/>
+          <stop offset="35%" stopColor="#fff4d8" stopOpacity=".08"/>
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0"/>
+        </linearGradient>
+        <pattern id="woodStripes" width="28" height="28" patternUnits="userSpaceOnUse">
+          <rect width="28" height="28" fill="transparent"/>
+          <rect width="13" height="28" fill="#ffffff" opacity=".05"/>
+          <rect x="13" width="2" height="28" fill="#7a4d1f" opacity=".35"/>
+          <rect x="15" width="13" height="28" fill="#7f5425" opacity=".18"/>
+        </pattern>
+        <linearGradient id="tubeLight" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#ffffff"/>
+          <stop offset="100%" stopColor="#d8dde3"/>
+        </linearGradient>
+        <linearGradient id="netShade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#cfd7df" stopOpacity=".95"/>
+          <stop offset="100%" stopColor="#84909b" stopOpacity=".42"/>
+        </linearGradient>
+        <radialGradient id="goalShadow" cx="50%" cy="35%" r="70%">
+          <stop offset="0%" stopColor="#000000" stopOpacity=".30"/>
+          <stop offset="100%" stopColor="#000000" stopOpacity="0"/>
+        </radialGradient>
+        <radialGradient id="shotGlow"><stop offset="0" stopColor="currentColor" stopOpacity=".52"/><stop offset="1" stopColor="currentColor" stopOpacity="0"/></radialGradient>
+        <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="8" stdDeviation="10" floodColor="#000000" floodOpacity=".35"/>
+        </filter>
       </defs>
-      <rect x="0" y="0" width="700" height="720" rx="18" className="court-bg"/>
-      <rect x="235" y="40" width="230" height="115" rx="3" className="court-goal"/>
-      <line x1="312" y1="40" x2="312" y2="155" className="goal-grid"/><line x1="388" y1="40" x2="388" y2="155" className="goal-grid"/><line x1="235" y1="78" x2="465" y2="78" className="goal-grid"/><line x1="235" y1="117" x2="465" y2="117" className="goal-grid"/>
-      <line x1="60" y1="175" x2="640" y2="175" className="court-line"/>
-      <line x1="60" y1="175" x2="60" y2="690" className="court-line"/><line x1="640" y1="175" x2="640" y2="690" className="court-line"/>
-      <path d="M105 175 Q120 350 350 350 Q580 350 595 175" className="court-line thick"/>
-      <path d="M70 175 Q100 440 350 440 Q600 440 630 175" className="court-dash"/>
-      <line x1="305" y1="420" x2="395" y2="420" className="seven-line"/>
-      <text x="350" y="412" textAnchor="middle" className="court-label">7 m</text>
-      <text x="92" y="555" className="zone-caption">Extremo izq.</text><text x="195" y="590" className="zone-caption">Lateral izq.</text><text x="350" y="622" textAnchor="middle" className="zone-caption">Central</text><text x="505" y="590" className="zone-caption">Lateral der.</text><text x="608" y="555" textAnchor="end" className="zone-caption">Extremo der.</text><text x="350" y="320" textAnchor="middle" className="zone-caption">Pivote</text>
 
-      {shots.map(s=>{
-        const o=shotOriginSvgPoint(s), g=shotGoalSvgPoint(s)
+      <rect x="0" y="0" width="700" height="720" rx="18" fill="url(#arenaBackdrop)"/>
+      <rect x="48" y="14" width="604" height="692" rx="20" className="arena-frame"/>
+      <rect x={courtRect.x} y={courtRect.y} width={courtRect.w} height={courtRect.h} rx="8" fill="url(#woodBase)"/>
+      <rect x={courtRect.x} y={courtRect.y} width={courtRect.w} height={courtRect.h} rx="8" fill="url(#woodStripes)" opacity=".95"/>
+      <rect x={courtRect.x} y={courtRect.y} width={courtRect.w} height={courtRect.h} rx="8" fill="url(#floorGlow)"/>
+      <ellipse cx="350" cy="175" rx="190" ry="54" fill="url(#goalShadow)" className="goal-floor-shadow"/>
+
+      <path d="M 248 34 L 452 34 L 464 56 L 236 56 Z" className="goal-back-frame" filter="url(#softShadow)"/>
+      <path d="M 248 34 L 248 146 L 236 168 L 236 56 Z" className="goal-side-depth"/>
+      <path d="M 452 34 L 452 146 L 464 168 L 464 56 Z" className="goal-side-depth"/>
+      <path d="M 248 146 L 452 146 L 464 168 L 236 168 Z" className="goal-floor-depth"/>
+
+      {Array.from({ length: 10 }).map((_, index) => {
+        const fx = 236 + index * 22.8
+        const bx = 248 + index * 20.4
+        return <line key={`net-v-${index}`} x1={fx} y1="56" x2={bx} y2="146" className="goal-net-line" />
+      })}
+      {Array.from({ length: 7 }).map((_, index) => {
+        const yFront = 56 + index * 18.7
+        const yBack = 34 + index * 18.7
+        return <polyline key={`net-h-${index}`} points={`236,${yFront} 464,${yFront} 452,${yBack} 248,${yBack} 236,${yFront}`} className="goal-net-line" />
+      })}
+
+      <rect x="236" y="56" width="228" height="112" fill="rgba(255,255,255,0.04)"/>
+      <rect x="236" y="56" width="228" height="112" className="goal-front-frame"/>
+
+      {Array.from({ length: 5 }).map((_, index) => (
+        <rect key={`left-post-${index}`} x="236" y={56 + index * 22.4} width="10" height="11.2" className="goal-band" />
+      ))}
+      {Array.from({ length: 5 }).map((_, index) => (
+        <rect key={`right-post-${index}`} x="454" y={56 + index * 22.4} width="10" height="11.2" className="goal-band" />
+      ))}
+      {Array.from({ length: 7 }).map((_, index) => (
+        <rect key={`cross-band-${index}`} x={252 + index * 28} y="56" width="14" height="10" className="goal-band" />
+      ))}
+
+      <line x1="312" y1="56" x2="312" y2="168" className="goal-grid"/>
+      <line x1="388" y1="56" x2="388" y2="168" className="goal-grid"/>
+      <line x1="236" y1="93" x2="464" y2="93" className="goal-grid"/>
+      <line x1="236" y1="131" x2="464" y2="131" className="goal-grid"/>
+
+      <path d={`M ${courtRect.x} ${courtRect.y} L ${courtRect.x + courtRect.w} ${courtRect.y} L ${courtRect.x + courtRect.w} ${courtRect.y + courtRect.h} L ${courtRect.x} ${courtRect.y + courtRect.h} Z`} className="court-outline"/>
+      <path d="M107 176 Q124 348 350 348 Q576 348 593 176" className="court-area-six"/>
+      <path d="M74 176 Q105 438 350 438 Q595 438 626 176" className="court-area-nine"/>
+      <line x1="306" y1="417" x2="394" y2="417" className="seven-line realistic"/>
+      <circle cx="350" cy="507" r="2.8" className="court-spot"/>
+      <text x="350" y="410" textAnchor="middle" className="court-label realistic">7 m</text>
+      <text x="87" y="559" className="zone-caption">Extremo izq.</text>
+      <text x="194" y="592" className="zone-caption">Lateral izq.</text>
+      <text x="350" y="625" textAnchor="middle" className="zone-caption">Central</text>
+      <text x="507" y="592" className="zone-caption">Lateral der.</text>
+      <text x="613" y="559" textAnchor="end" className="zone-caption">Extremo der.</text>
+      <text x="350" y="320" textAnchor="middle" className="zone-caption">Pivote</text>
+      <text x="350" y="699" textAnchor="middle" className="attack-direction">Dirección de ataque ↑</text>
+
+      {shots.map(s => {
+        const o = shotOriginSvgPoint(s)
+        const g = shotGoalSvgPoint(s)
         return <g key={s.id} className={`court-shot ${s.result}`}>
-          {mapMode==='traces' && <line x1={o.x} y1={o.y} x2={g.x} y2={g.y} className="shot-trace"/>}
-          {mapMode==='heat' && <><circle cx={o.x} cy={o.y} r="42" className="heat-origin"/><circle cx={g.x} cy={g.y} r="32" className="heat-target"/></>}
-          <circle cx={o.x} cy={o.y} r="7" className="origin-dot"/><circle cx={g.x} cy={g.y} r="6" className="target-dot"/><text x={o.x+10} y={o.y-9} className="court-shot-number">#{s.shooterNumber}</text>
+          {mapMode === 'traces' && <line x1={o.x} y1={o.y} x2={g.x} y2={g.y} className="shot-trace" />}
+          {mapMode === 'heat' && <><circle cx={o.x} cy={o.y} r="44" className="heat-origin"/><circle cx={g.x} cy={g.y} r="30" className="heat-target"/></>}
+          <circle cx={o.x} cy={o.y} r="7" className="origin-dot"/>
+          <circle cx={g.x} cy={g.y} r="6" className="target-dot"/>
+          <text x={o.x + 10} y={o.y - 9} className="court-shot-number">#{s.shooterNumber}</text>
         </g>
       })}
 
-      {draftOriginSvg && <g className="draft-marker"><circle cx={draftOriginSvg.x} cy={draftOriginSvg.y} r="12"/><text x={draftOriginSvg.x+16} y={draftOriginSvg.y-12}>ORIGEN</text></g>}
-      {draftGoalSvg && <g className="draft-marker goal-draft"><circle cx={draftGoalSvg.x} cy={draftGoalSvg.y} r="10"/><text x={draftGoalSvg.x+14} y={draftGoalSvg.y-10}>DESTINO</text></g>}
+      {draftOriginSvg && <g className="draft-marker"><circle cx={draftOriginSvg.x} cy={draftOriginSvg.y} r="12"/><text x={draftOriginSvg.x + 16} y={draftOriginSvg.y - 12}>ORIGEN</text></g>}
+      {draftGoalSvg && <g className="draft-marker goal-draft"><circle cx={draftGoalSvg.x} cy={draftGoalSvg.y} r="10"/><text x={draftGoalSvg.x + 14} y={draftGoalSvg.y - 10}>DESTINO</text></g>}
       {draftOriginSvg && draftGoalSvg && <line x1={draftOriginSvg.x} y1={draftOriginSvg.y} x2={draftGoalSvg.x} y2={draftGoalSvg.y} className="draft-trace"/>}
     </svg>
     <div className="court-legend"><span><i className="legend-dot save"></i>Parada</span><span><i className="legend-dot goal"></i>Gol</span><span><i className="legend-dot post_out"></i>Fuera/Poste</span><span><i className="legend-dot blocked"></i>Bloqueo</span></div>
   </div>
 }
+
 
 export default App

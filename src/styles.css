@@ -9,3 +9,39 @@
 /* BarakAPP v0.3.1 · Gestión de porteros + teclado rival */
 .team-head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}.goalkeeper-admin-head{align-items:flex-start}.goalkeeper-admin-grid{display:grid;grid-template-columns:minmax(420px,1.25fr) minmax(300px,.75fr);gap:14px;align-items:start}.count-badge{min-width:30px;height:30px;border-radius:999px;background:#282509;border:1px solid #5a5010;color:#f4c400;display:grid;place-items:center;font-weight:900}.admin-gk-list{display:grid;gap:8px}.admin-gk-row{display:grid;grid-template-columns:58px 1fr auto;align-items:center;gap:12px;padding:10px;border:1px solid #2d3237;background:#101316;border-radius:11px}.admin-gk-number{height:48px;border-radius:10px;background:#f4c400;color:#111;display:grid;place-items:center;font-size:22px;font-weight:950}.admin-gk-row>div:nth-child(2){display:grid;gap:3px}.admin-gk-row small{color:#858c93}.admin-gk-actions{display:flex;gap:6px}.danger-icon{color:#ff8c8c;border-color:#4e2b2b}.gk-form label{display:grid;gap:7px;color:#cfd2d5;font-size:13px;margin:14px 0}.gk-form-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.form-message{padding:10px 11px;border:1px solid #5a4e13;background:#28230b;color:#f3da66;border-radius:9px;font-size:12px}.shooter-section-title{display:grid;gap:2px;margin-bottom:8px}.shooter-section-title span{font-size:13px;font-weight:850;color:#f2f2f2}.shooter-section-title small{font-size:10px;color:#858c93}.shooter-display{height:52px;border:1px solid #3a3f45;background:#0d0f11;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:8px}.shooter-display span{font-size:18px;color:#7f878f}.shooter-display strong{font-size:28px;line-height:1;color:#f4c400;font-variant-numeric:tabular-nums}.digit-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.digit-pad button{height:46px;border-radius:9px;border:1px solid #363b40;background:#15181b;color:#fff;font-size:18px;font-weight:850;cursor:pointer}.digit-pad button:nth-child(10){grid-column:2}.digit-pad button:hover{border-color:#686e75}.digit-pad .digit-action{font-size:14px;color:#c8cdd2}.digit-pad .digit-action.clear{grid-column:3;grid-row:4}.digit-pad .digit-action:nth-last-child(2){grid-column:1;grid-row:4}.digit-pad button:disabled{opacity:.35;cursor:not-allowed}
 @media(max-width:850px){.goalkeeper-admin-grid{grid-template-columns:1fr}.team-head-actions{justify-content:flex-start}.digit-pad{grid-template-columns:repeat(3,1fr)}.digit-pad button{height:48px}}
+
+/* BarakAPP v0.3.2 · mejora visual premium de pista y portería */
+.premium-court-wrap{background:linear-gradient(180deg,#15191d 0%,#0e1114 100%);border:1px solid #30363d;border-radius:16px;padding:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 24px 48px rgba(0,0,0,.28)}
+.premium-court-svg{filter:drop-shadow(0 14px 30px rgba(0,0,0,.22))}
+.arena-frame{fill:none;stroke:rgba(255,255,255,.06);stroke-width:2}
+.goal-floor-shadow{opacity:.9}
+.goal-back-frame{fill:url(#tubeLight);stroke:#a4b0bc;stroke-width:3}
+.goal-side-depth,.goal-floor-depth{fill:rgba(202,213,224,.12);stroke:rgba(186,199,213,.26);stroke-width:1.5}
+.goal-front-frame{fill:none;stroke:url(#tubeLight);stroke-width:12;stroke-linejoin:round;stroke-linecap:round;filter:drop-shadow(0 6px 8px rgba(0,0,0,.35))}
+.goal-band{fill:#d9473d;opacity:.96}
+.goal-grid{stroke:rgba(230,236,241,.34);stroke-width:1.1;stroke-dasharray:4 5}
+.goal-net-line{fill:none;stroke:url(#netShade);stroke-width:1.3;opacity:.82}
+.court-outline{fill:none;stroke:rgba(255,255,255,.92);stroke-width:3}
+.court-area-six{fill:none;stroke:#f6f7f8;stroke-width:4.3;stroke-linecap:round}
+.court-area-nine{fill:none;stroke:rgba(255,255,255,.95);stroke-width:3.2;stroke-dasharray:13 10;stroke-linecap:round}
+.seven-line.realistic{stroke:#f4c400;stroke-width:6;stroke-linecap:round;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
+.court-spot{fill:#fff;opacity:.9}
+.court-label.realistic{fill:#101215;font-size:13px;font-weight:900;paint-order:stroke;stroke:#f0c93a;stroke-width:3px;stroke-opacity:.28}
+.zone-caption{fill:rgba(20,22,26,.84);font-size:12px;font-weight:700;paint-order:stroke;stroke:rgba(255,245,214,.3);stroke-width:3px;stroke-opacity:.45}
+.attack-direction{fill:#f7f0db;font-size:12px;letter-spacing:.08em;font-weight:700;opacity:.88}
+.court-shot .shot-trace{stroke-width:2.5;opacity:.42}
+.court-shot .origin-dot{filter:drop-shadow(0 2px 5px rgba(0,0,0,.28))}
+.court-shot .target-dot{filter:drop-shadow(0 2px 5px rgba(0,0,0,.28))}
+.court-shot.goal .origin-dot,.court-shot.goal .target-dot{stroke:#591515;stroke-width:2.5}
+.court-shot.save .origin-dot,.court-shot.save .target-dot{stroke:#0f3d25;stroke-width:2.5}
+.court-shot.post_out .origin-dot,.court-shot.post_out .target-dot{stroke:#3e4349;stroke-width:2.5}
+.court-shot.blocked .origin-dot,.court-shot.blocked .target-dot{stroke:#163252;stroke-width:2.5}
+.heat-origin,.heat-target{opacity:.9}
+.draft-marker circle,.goal-draft circle{filter:drop-shadow(0 0 8px rgba(0,0,0,.38))}
+.draft-trace{stroke-width:3.5;stroke-dasharray:7 7}
+.visual-stage{background:linear-gradient(180deg,#171b1f 0%,#101316 100%)}
+.visual-toolbar h2{font-size:26px;letter-spacing:-.02em}
+.visual-toolbar p{color:#a4acb4}
+.left-rail,.right-rail .panel,.timeline-v2,.filter-panel,.compact-kpis{box-shadow:inset 0 1px 0 rgba(255,255,255,.02)}
+.match-commandbar,.discipline-strip,.left-rail,.visual-stage,.right-rail .panel{border-color:#2d3339}
+@media(max-width:760px){.premium-court-wrap{padding:8px}}
