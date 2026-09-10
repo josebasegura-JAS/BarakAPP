@@ -1,96 +1,102 @@
-# BarakAPP v0.1.0
+# BarakAPP 0.2.0 — Electron local
 
-Primera versión funcional de la aplicación web del club para registrar estadísticas de porteros de balonmano.
+Primera versión de escritorio de **BarakAPP** para probar el flujo completo de estadísticas de porteros sin servidor ni base de datos remota.
 
 ## Qué incluye
 
-- Login con Supabase cuando se configuran las variables de entorno.
-- Modo demo local automático si todavía no se configura Supabase.
+- Aplicación React + TypeScript empaquetable como **Electron portable para Windows**.
+- Login local de pruebas.
 - Selección de equipo.
 - Historial de partidos.
-- Creación de partido y rival reutilizable.
-- Marcador local/rival con +/-.
-- Cronómetro iniciar / pausar / reiniciar y cambio de parte.
-- Exclusiones de 2 minutos con cuenta atrás sincronizada con el cronómetro.
-- Registro de tarjetas en cronología.
-- Selección del portero en pista.
+- Alta de rival reutilizable.
+- Nuevo partido.
+- Marcador manual.
+- Cronómetro iniciar / pausar / reanudar.
+- Cambio de parte.
+- Exclusiones de 2 minutos asociadas a dorsal con cuenta atrás ligada al reloj del partido.
+- Tarjetas.
+- Selección/cambio de portero.
 - Registro de lanzamiento con dorsal rival obligatorio.
-- Zona de origen del tiro.
-- Destino pulsando directamente sobre una portería; se guardan coordenadas X/Y.
-- Resultado: gol, parada, fuera/poste o bloqueo.
-- El gol recibido actualiza automáticamente el marcador rival según local/visitante.
-- Hoja de destino / mapa básico en tiempo real.
-- Filtro combinado por dorsal y zona de origen.
-- Cronología de eventos.
-- Deshacer último evento.
-- Diseño responsive amarillo/negro inspirado en los mockups aprobados.
+- Zona de origen del lanzamiento.
+- Destino exacto pulsando sobre la portería (coordenadas X/Y).
+- Gol, parada, fuera/poste y bloqueo.
+- Cronología de eventos y deshacer.
+- Mapa de destino filtrable por jugador, zona o ambos.
 
-## Arranque rápido local
+## Almacenamiento en esta versión
+
+No existe Supabase ni servidor. Los datos se guardan localmente mediante el almacenamiento del navegador interno de Electron.
+
+En Windows, Chromium/Electron conserva estos datos dentro del perfil de usuario de BarakAPP. Por tanto:
+
+- cerrar y volver a abrir el programa **no borra los partidos**;
+- los datos pertenecen únicamente a ese PC/usuario de Windows;
+- borrar los datos de aplicación de BarakAPP sí elimina la información;
+- esta versión es exclusivamente de pruebas. Antes del uso real conectaremos la aplicación a la base de datos central.
+
+## Probar durante el desarrollo
+
+Requisitos: Node.js 22 o superior.
 
 ```bash
 npm install
-npm run dev
+npm run dev:electron
 ```
 
-Sin `.env`, la app funciona en **modo demo** y guarda los datos en `localStorage`.
-
-## Activar Supabase
-
-1. Crea un proyecto gratuito en Supabase.
-2. Abre **SQL Editor** y ejecuta `supabase/migrations/001_initial.sql`.
-3. Copia `.env.example` a `.env.local`.
-4. Completa:
-
-```env
-VITE_SUPABASE_URL=https://TU-PROYECTO.supabase.co
-VITE_SUPABASE_ANON_KEY=TU_ANON_KEY
-```
-
-5. En Supabase Authentication crea inicialmente los usuarios del club.
-
-> En v0.1 el login ya usa Supabase cuando está configurado, pero la capa de datos de partidos sigue trabajando en almacenamiento local para permitir probar toda la interfaz sin backend. La migración SQL incluida deja preparado el modelo servidor. La siguiente versión conectará equipos, partidos, tiros y eventos directamente a esas tablas.
-
-## Subir a GitHub
-
-Desde la carpeta del proyecto:
+## Generar el EXE portable en Windows
 
 ```bash
-git init
-git add .
-git commit -m "BarakAPP v0.1.0"
-git branch -M main
-git remote add origin https://github.com/TU-USUARIO/barakapp.git
-git push -u origin main
+npm install
+npm run dist
 ```
 
-## Publicar gratis
+El resultado aparecerá en:
 
-### Cloudflare Pages
+```text
+release/BarakAPP-0.2.0-portable.exe
+```
 
-- Conecta el repositorio GitHub.
-- Build command: `npm run build`
-- Output directory: `dist`
-- Añade `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en Environment variables cuando conectemos Supabase.
+El EXE es portable: no requiere instalador.
 
-### Vercel
+## Generarlo automáticamente desde GitHub
 
-También funciona directamente importando el repo de GitHub; detectará Vite automáticamente.
+El repositorio contiene:
 
-## Siguiente versión recomendada
+```text
+.github/workflows/build-windows.yml
+```
 
-1. Persistencia real en Supabase.
-2. Gestión de plantillas y porteros desde la app.
-3. Roles de usuario.
-4. Rival + dorsales rivales persistentes por partido.
-5. Mapa de calor continuo de origen y destino.
-6. Funcionamiento PWA/offline con sincronización posterior.
-7. Edición completa de eventos históricos.
+Al subir cambios a `main`, GitHub Actions compila automáticamente BarakAPP para Windows.
 
-## Referencias visuales aprobadas
+Para descargarlo:
 
-Se incluyen en `docs/reference/` los dos mockups acordados:
+1. Abre el repositorio en GitHub.
+2. Entra en **Actions**.
+3. Abre la ejecución `Build BarakAPP Windows`.
+4. En la parte inferior, descarga el artefacto **BarakAPP-Windows-portable**.
+5. Descomprime el ZIP del artefacto y ejecuta el `.exe`.
 
-- `barakapp-partido-reference.png`
-- `barakapp-hoja-lanzamientos-reference.png`
+También se puede lanzar manualmente desde `Actions > Build BarakAPP Windows > Run workflow`.
 
-Estas imágenes son la referencia de diseño para las siguientes iteraciones.
+## Estructura
+
+```text
+barakapp/
+├─ electron/
+│  ├─ main.cjs
+│  └─ preload.cjs
+├─ src/
+├─ .github/workflows/
+│  └─ build-windows.yml
+├─ package.json
+├─ vite.config.ts
+└─ README.md
+```
+
+## Camino previsto
+
+Esta fase mantiene todo en local para trabajar deprisa. Cuando el funcionamiento esté cerrado:
+
+1. conectaremos autenticación y datos a Supabase;
+2. mantendremos Electron para escritorio si interesa;
+3. publicaremos la misma interfaz como PWA en Cloudflare Pages para Android/iOS/tablet.

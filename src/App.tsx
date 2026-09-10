@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, Clock3, LogOut, Pause, Play, Plus, RotateCcw, Shield, Target, Undo2, Users } from 'lucide-react'
 import type { Match, MatchEvent, Rival, Shot, ShotResult, ShotZone, Team } from './types'
 import { loadMatches, loadRivals, loadTeams, saveMatches, saveRivals } from './storage'
-import { supabase, supabaseEnabled } from './supabase'
 
 type Screen = 'login' | 'teams' | 'team' | 'new' | 'match'
 
@@ -48,20 +47,12 @@ function App() {
   const selectedTeam = teams.find(t => t.id === selectedTeamId)
   const selectedMatch = matches.find(m => m.id === selectedMatchId)
 
-  async function handleLogin(email: string, password: string) {
-    if (!supabaseEnabled || !supabase) {
-      setDemoUser(email || 'demo@barakapp.local')
-      setScreen('teams')
-      return
-    }
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
-    setDemoUser(email)
+  async function handleLogin(email: string, _password: string) {
+    setDemoUser(email || 'demo@barakapp.local')
     setScreen('teams')
   }
 
   function logout() {
-    if (supabaseEnabled && supabase) void supabase.auth.signOut()
     setScreen('login')
   }
 
@@ -108,7 +99,7 @@ function App() {
         </button>
         {screen !== 'login' && (
           <div className="topbar-actions">
-            <span className="mode-badge">{supabaseEnabled ? 'Servidor Supabase' : 'Modo demo local'}</span>
+            <span className="mode-badge">Modo local · Electron</span>
             <span className="user-label">{demoUser}</span>
             <button className="icon-btn" onClick={logout} title="Cerrar sesión"><LogOut size={18} /></button>
           </div>
@@ -157,7 +148,7 @@ function Login({ onLogin }: { onLogin: (email: string, password: string) => Prom
         <label>Contraseña<input value={password} onChange={e => setPassword(e.target.value)} type="password" required /></label>
         {error && <div className="error-box">{error}</div>}
         <button className="primary-btn" disabled={busy}>{busy ? 'Entrando…' : 'Entrar'}</button>
-        {!supabaseEnabled && <div className="demo-note">Sin .env configurado: cualquier usuario y contraseña entra en modo demo.</div>}
+        <div className="demo-note">Versión local de pruebas: los datos se guardan únicamente en este PC. Cualquier usuario y contraseña permiten entrar.</div>
       </form>
     </section>
   )
