@@ -1,93 +1,122 @@
-# BarakAPP en servidor
+# BarakAPP · Firebase Hosting + Auth + Firestore
 
-Esta rama convierte BarakAPP en una aplicación web/PWA con datos centralizados en Supabase.
+Esta rama convierte BarakAPP en una aplicación web/PWA centralizada en Firebase.
 
 ## Arquitectura
 
 - Frontend: React + Vite.
-- Hosting web: Vercel, Netlify o equivalente.
-- Backend y base de datos: Supabase.
-- Autenticación: Supabase Auth.
-- Persistencia: un estado JSON por club protegido con RLS.
-- Caché local: `localStorage`, utilizada como copia de trabajo y respaldo durante pérdidas breves de conexión.
-- PWA: manifest + service worker para poder instalar BarakAPP desde el navegador.
+- Hosting: Firebase Hosting.
+- Autenticación: Firebase Authentication con email y contraseña.
+- Datos: Cloud Firestore.
+- Caché local: localStorage como copia de trabajo.
+- PWA: manifest + service worker para instalar BarakAPP desde navegador.
 
-## 1. Crear proyecto Supabase
+## 1. Crear el proyecto Firebase
 
-1. Crear un proyecto nuevo en Supabase.
-2. Abrir `SQL Editor`.
-3. Ejecutar el contenido completo de `supabase/migrations/001_initial.sql`.
-4. En `Authentication > Users`, crear el primer usuario con email y contraseña.
-5. Copiar el UUID del usuario.
-6. Ejecutar en `SQL Editor`, sustituyendo el UUID:
+1. Entrar en Firebase Console y crear un proyecto, por ejemplo `barakapp`.
+2. No es necesario activar Google Analytics para que BarakAPP funcione.
+3. En la pantalla principal del proyecto, añadir una aplicación Web (`</>`).
+4. Nombre sugerido: `BarakAPP Web`.
+5. Copiar el objeto `firebaseConfig` que muestra Firebase.
 
-```sql
-with new_club as (
-  insert into public.clubs(name)
-  values ('Balonmano Barakaldo')
-  returning id
-)
-insert into public.club_members(user_id, club_id, display_name, role)
-select 'UUID_DEL_USUARIO'::uuid, id, 'Administrador', 'admin'
-from new_club;
-```
+## 2. Activar Authentication
 
-## 2. Obtener credenciales públicas
+1. Abrir `Build > Authentication`.
+2. Pulsar `Get started`.
+3. En `Sign-in method`, activar `Email/Password`.
+4. No habilitar registro público en BarakAPP.
+5. En `Users`, crear manualmente las cuentas autorizadas del club.
 
-En Supabase, copiar:
+Todos los usuarios que tú crees en Firebase Auth compartirán los datos del club Barakaldo.
 
-- Project URL.
-- anon/public key.
+## 3. Crear Firestore
 
-Estas claves se configuran como variables del frontend:
+1. Abrir `Build > Firestore Database`.
+2. Crear la base de datos.
+3. Elegir una región europea cercana.
+4. Puedes iniciar en modo bloqueado/producción: las reglas definitivas están en `firestore.rules`.
+
+La aplicación guardará los datos bajo:
+
+- `clubs/barakaldo/teams`
+- `clubs/barakaldo/rivals`
+- `clubs/barakaldo/matches`
+
+Cada partido guarda sus lanzamientos dentro del propio documento del partido.
+
+## 4. Variables de Firebase
+
+Crear un archivo `.env.local` a partir de `.env.example`:
 
 ```text
-VITE_SUPABASE_URL=https://TU-PROYECTO.supabase.co
-VITE_SUPABASE_ANON_KEY=TU_CLAVE_ANON_PUBLICA
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_STORAGE_BUCKET=...
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_FIREBASE_APP_ID=...
 ```
 
-La anon key es una clave pública de cliente. La seguridad real depende de las políticas RLS definidas en la migración.
+Los valores salen del objeto `firebaseConfig` de la aplicación Web creada en Firebase.
 
-## 3. Desplegar el frontend
+## 5. Probar localmente
 
-En Vercel:
-
-1. Importar el repositorio `josebasegura-JAS/BarakAPP`.
-2. Framework preset: Vite.
-3. Build command: `npm run build`.
-4. Output directory: `dist`.
-5. Añadir `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en Environment Variables.
-6. Desplegar.
-
-No hace falta mantener un servidor Node propio encendido.
-
-## 4. Añadir más usuarios
-
-Crear el usuario en `Authentication > Users`, copiar su UUID y ejecutar:
-
-```sql
-insert into public.club_members(user_id, club_id, display_name, role)
-select 'UUID_NUEVO_USUARIO'::uuid, id, 'Entrenador', 'coach'
-from public.clubs
-where name = 'Balonmano Barakaldo'
-limit 1;
+```bash
+npm install
+npm run dev
 ```
 
-Todos los usuarios asociados al mismo club ven el mismo estado de BarakAPP.
+Después entra con una cuenta creada manualmente en Firebase Authentication.
 
-## 5. Funcionamiento offline
+## 6. Preparar Firebase CLI
 
-La aplicación mantiene una copia local de equipos, rivales, partidos y lanzamientos. Los cambios se agrupan y se sincronizan con Supabase al trabajar con sesión activa.
+```bash
+npm install -g firebase-tools
+firebase login
+firebase use --add
+```
 
-La PWA también cachea el shell de la aplicación. Esto permite abrir la app si la conexión cae, aunque la sincronización con el servidor necesita recuperar conectividad.
+Selecciona el proyecto Firebase de BarakAPP y asígnalo como `default`.
 
-## 6. Paso a producción
+## 7. Desplegar
 
-Antes de fusionar con `main`:
+Primero compilar:
 
-- comprobar que `npm run build` finaliza sin errores;
-- probar login con un usuario real de Supabase;
-- crear un lanzamiento desde un dispositivo;
-- abrir BarakAPP desde otro dispositivo y verificar que aparece;
-- probar pérdida y recuperación de red;
-- verificar que un usuario no asociado al club no puede leer `app_state`.
+```bash
+npm run build
+```
+
+Después desplegar Hosting y las reglas de Firestore:
+
+```bash
+firebase deploy --only hosting,firestore:rules
+```
+
+Firebase publicará la aplicación normalmente en:
+
+```text
+https://PROJECT_ID.web.app
+```
+
+También tendrás el dominio equivalente `PROJECT_ID.firebaseapp.com`.
+
+## 8. Seguridad
+
+`firestore.rules` deniega cualquier lectura o escritura anónima. Solo usuarios autenticados con Firebase Authentication pueden acceder a `clubs/barakaldo/**`.
+
+No existe alta pública de usuarios desde BarakAPP. Las cuentas se crean desde Firebase Console.
+
+## 9. Funcionamiento y sincronización
+
+BarakAPP conserva localmente los equipos, rivales y partidos para que la interfaz sea rápida. Con una sesión autenticada, los cambios se sincronizan con Firestore automáticamente.
+
+La PWA cachea además los recursos principales de la aplicación. Una interrupción breve de conexión no impide seguir viendo la interfaz ya cargada; la escritura remota requiere recuperar conectividad.
+
+## 10. Prueba antes de fusionar a main
+
+- comprobar que GitHub Actions termina en verde;
+- iniciar sesión con un usuario real;
+- crear un partido y varios lanzamientos desde un dispositivo;
+- abrir BarakAPP desde otro dispositivo con otra cuenta autorizada;
+- comprobar que aparecen los mismos datos;
+- cerrar sesión y verificar que Firestore no es accesible sin autenticación.
