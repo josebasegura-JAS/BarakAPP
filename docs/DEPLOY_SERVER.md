@@ -8,45 +8,60 @@ Esta rama convierte BarakAPP en una aplicación web/PWA centralizada en Firebase
 - Hosting: Firebase Hosting.
 - Autenticación: Firebase Authentication con email y contraseña.
 - Datos: Cloud Firestore.
+- PWA instalable en móvil, tablet y PC.
 - Caché local: localStorage como copia de trabajo.
-- PWA: manifest + service worker para instalar BarakAPP desde navegador.
 
 ## 1. Crear el proyecto Firebase
 
-1. Entrar en Firebase Console y crear un proyecto, por ejemplo `barakapp`.
-2. No es necesario activar Google Analytics para que BarakAPP funcione.
-3. En la pantalla principal del proyecto, añadir una aplicación Web (`</>`).
-4. Nombre sugerido: `BarakAPP Web`.
-5. Copiar el objeto `firebaseConfig` que muestra Firebase.
+1. En Firebase Console crea un proyecto, por ejemplo `barakapp`.
+2. Google Analytics es opcional.
+3. Añade una aplicación Web (`</>`), por ejemplo `BarakAPP Web`.
+4. Copia el objeto `firebaseConfig` que muestra Firebase.
 
 ## 2. Activar Authentication
 
-1. Abrir `Build > Authentication`.
-2. Pulsar `Get started`.
-3. En `Sign-in method`, activar `Email/Password`.
-4. No habilitar registro público en BarakAPP.
-5. En `Users`, crear manualmente las cuentas autorizadas del club.
-
-Todos los usuarios que tú crees en Firebase Auth compartirán los datos del club Barakaldo.
+1. `Build > Authentication > Get started`.
+2. En `Sign-in method`, activa `Email/Password`.
+3. En `Users`, crea manualmente cada cuenta autorizada.
+4. Copia el UID de cada usuario creado.
 
 ## 3. Crear Firestore
 
-1. Abrir `Build > Firestore Database`.
-2. Crear la base de datos.
-3. Elegir una región europea cercana.
-4. Puedes iniciar en modo bloqueado/producción: las reglas definitivas están en `firestore.rules`.
+1. `Build > Firestore Database`.
+2. Crea la base de datos en una región europea adecuada.
+3. Puedes iniciar en modo producción/bloqueado.
 
-La aplicación guardará los datos bajo:
+La app usa estas rutas:
 
-- `clubs/barakaldo/teams`
-- `clubs/barakaldo/rivals`
-- `clubs/barakaldo/matches`
+```text
+clubs/barakaldo/members/{UID}
+clubs/barakaldo/teams/{teamId}
+clubs/barakaldo/rivals/{rivalId}
+clubs/barakaldo/matches/{matchId}
+```
 
-Cada partido guarda sus lanzamientos dentro del propio documento del partido.
+## 4. Autorizar usuarios del club
 
-## 4. Variables de Firebase
+Para cada usuario de Authentication, crea manualmente en Firestore el documento:
 
-Crear un archivo `.env.local` a partir de `.env.example`:
+```text
+clubs / barakaldo / members / UID_DEL_USUARIO
+```
+
+El ID del documento debe ser exactamente el UID de Firebase Authentication.
+
+Puedes añadir campos informativos, por ejemplo:
+
+```text
+email: entrenador@club.es
+role: coach
+```
+
+Las reglas de `firestore.rules` comprueban que ese documento exista. Una cuenta autenticada que no figure en `members` no puede leer ni escribir los datos del club.
+
+## 5. Variables de Firebase
+
+Crea `.env.local` a partir de `.env.example`:
 
 ```text
 VITE_FIREBASE_API_KEY=...
@@ -57,18 +72,18 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...
 ```
 
-Los valores salen del objeto `firebaseConfig` de la aplicación Web creada en Firebase.
+Los valores salen del objeto `firebaseConfig` de tu app Web.
 
-## 5. Probar localmente
+## 6. Probar localmente
 
 ```bash
 npm install
 npm run dev
 ```
 
-Después entra con una cuenta creada manualmente en Firebase Authentication.
+Entra con una cuenta creada en Authentication y autorizada en `members`.
 
-## 6. Preparar Firebase CLI
+## 7. Preparar Firebase CLI
 
 ```bash
 npm install -g firebase-tools
@@ -76,47 +91,27 @@ firebase login
 firebase use --add
 ```
 
-Selecciona el proyecto Firebase de BarakAPP y asígnalo como `default`.
+Selecciona el proyecto de BarakAPP y asígnalo como `default`.
 
-## 7. Desplegar
-
-Primero compilar:
+## 8. Desplegar
 
 ```bash
 npm run build
-```
-
-Después desplegar Hosting y las reglas de Firestore:
-
-```bash
 firebase deploy --only hosting,firestore:rules
 ```
 
-Firebase publicará la aplicación normalmente en:
+Firebase Hosting publicará normalmente en:
 
 ```text
 https://PROJECT_ID.web.app
 ```
 
-También tendrás el dominio equivalente `PROJECT_ID.firebaseapp.com`.
+También estará disponible mediante `PROJECT_ID.firebaseapp.com`.
 
-## 8. Seguridad
+## 9. Prueba antes de fusionar a main
 
-`firestore.rules` deniega cualquier lectura o escritura anónima. Solo usuarios autenticados con Firebase Authentication pueden acceder a `clubs/barakaldo/**`.
-
-No existe alta pública de usuarios desde BarakAPP. Las cuentas se crean desde Firebase Console.
-
-## 9. Funcionamiento y sincronización
-
-BarakAPP conserva localmente los equipos, rivales y partidos para que la interfaz sea rápida. Con una sesión autenticada, los cambios se sincronizan con Firestore automáticamente.
-
-La PWA cachea además los recursos principales de la aplicación. Una interrupción breve de conexión no impide seguir viendo la interfaz ya cargada; la escritura remota requiere recuperar conectividad.
-
-## 10. Prueba antes de fusionar a main
-
-- comprobar que GitHub Actions termina en verde;
-- iniciar sesión con un usuario real;
-- crear un partido y varios lanzamientos desde un dispositivo;
-- abrir BarakAPP desde otro dispositivo con otra cuenta autorizada;
-- comprobar que aparecen los mismos datos;
-- cerrar sesión y verificar que Firestore no es accesible sin autenticación.
+- GitHub Actions en verde.
+- Login con usuario autorizado.
+- Crear partido y lanzamientos desde un dispositivo.
+- Abrir desde otro dispositivo y comprobar los mismos datos.
+- Probar un usuario autenticado sin documento en `members` y verificar que Firestore deniega el acceso.
