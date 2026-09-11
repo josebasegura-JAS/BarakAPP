@@ -1,0 +1,20 @@
+.app-shell .mode-badge,
+.app-shell .user-label,
+.app-shell .topbar-actions > .icon-btn {
+  display: none;
+}
+
+.cloud-session-button {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 50;
+  box-shadow: 0 8px 30px rgba(0,0,0,.12);
+}
+
+@media (max-width: 700px) {
+  .cloud-session-button {
+    right: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+}
