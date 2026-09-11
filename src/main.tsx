@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import CloudGate from './CloudGate'
 import './styles.css'
+import './cloud.css'
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
