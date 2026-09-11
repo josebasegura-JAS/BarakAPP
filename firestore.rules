@@ -2,8 +2,18 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isBarakaldoMember() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/clubs/barakaldo/members/$(request.auth.uid));
+    }
+
+    match /clubs/barakaldo/members/{userId} {
+      allow read: if isBarakaldoMember();
+      allow write: if false;
+    }
+
     match /clubs/barakaldo/{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isBarakaldoMember();
     }
 
     match /{document=**} {
