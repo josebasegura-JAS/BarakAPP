@@ -1,11 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
-import { getSession, loadCloudState, saveCloudState, signIn, signOut, supabaseEnabled } from './supabase'
+import { firebaseEnabled, loadCloudState, observeAuth, saveCloudState, signIn, signOut } from './firebase'
 import { disableCloudSync, enableCloudSync, loadMatches, loadRivals, loadTeams, replaceLocalState } from './storage'
 
-type Props = {
-  children: ReactNode
-}
+type Props = { children: ReactNode }
 
 export default function CloudGate({ children }: Props) {
   const [ready, setReady] = useState(false)
@@ -23,11 +21,7 @@ export default function CloudGate({ children }: Props) {
     if (remote) {
       replaceLocalState(remote)
     } else {
-      await saveCloudState({
-        teams: loadTeams(),
-        matches: loadMatches(),
-        rivals: loadRivals(),
-      })
+      await saveCloudState({ teams: loadTeams(), matches: loadMatches(), rivals: loadRivals() })
     }
     enableCloudSync()
     setEmail(userEmail)
@@ -36,14 +30,23 @@ export default function CloudGate({ children }: Props) {
   }
 
   useEffect(() => {
-    if (!supabaseEnabled) {
+    if (!firebaseEnabled) {
       setBusy(false)
       return
     }
-    void getSession()
-      .then(session => session ? bootstrap(session.user.email ?? '') : undefined)
-      .catch(err => setError(err instanceof Error ? err.message : 'No se pudo recuperar la sesión'))
-      .finally(() => setBusy(false))
+    const unsubscribe = observeAuth(user => {
+      if (!user) {
+        disableCloudSync()
+        setAuthenticated(false)
+        setReady(false)
+        setBusy(false)
+        return
+      }
+      void bootstrap(user.email ?? '')
+        .catch(err => setError(err instanceof Error ? err.message : 'No se pudo cargar Firestore'))
+        .finally(() => setBusy(false))
+    })
+    return unsubscribe
   }, [])
 
   useEffect(() => {
@@ -69,12 +72,11 @@ export default function CloudGate({ children }: Props) {
     setBusy(true)
     setError('')
     try {
-      const session = await signIn(email, password)
-      await bootstrap(session.user.email ?? email)
+      const user = await signIn(email, password)
+      await bootstrap(user.email ?? email)
       setPassword('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo iniciar sesión')
-    } finally {
       setBusy(false)
     }
   }
@@ -89,8 +91,8 @@ export default function CloudGate({ children }: Props) {
     autoEntered.current = false
   }
 
-  if (!supabaseEnabled) {
-    return <section className="login-wrap"><div className="login-card"><div className="eyebrow">Configuración pendiente</div><h1>BarakAPP servidor</h1><p>Faltan las variables VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY del despliegue.</p></div></section>
+  if (!firebaseEnabled) {
+    return <section className="login-wrap"><div className="login-card"><div className="eyebrow">Configuración pendiente</div><h1>BarakAPP servidor</h1><p>Faltan las variables VITE_FIREBASE_* del proyecto Firebase.</p></div></section>
   }
 
   if (busy && !authenticated) {
@@ -100,7 +102,7 @@ export default function CloudGate({ children }: Props) {
   if (!authenticated) {
     return <section className="login-wrap">
       <form className="login-card cloud-login" onSubmit={submit}>
-        <div className="eyebrow">Datos centralizados · Supabase</div>
+        <div className="eyebrow">Datos centralizados · Firebase</div>
         <h1>Accede a BarakAPP</h1>
         <p>La misma información estará disponible desde móvil, tablet y PC.</p>
         <label>Email<input value={email} onChange={e => setEmail(e.target.value)} type="email" autoComplete="email" required /></label>
