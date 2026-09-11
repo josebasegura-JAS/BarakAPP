@@ -1,6 +1,6 @@
 import type { Match, Rival, Team } from './types'
 import { demoTeams } from './demo'
-import { saveCloudState, supabaseEnabled } from './supabase'
+import { firebaseEnabled, saveCloudState } from './firebase'
 
 const KEYS = {
   teams: 'barakapp_teams',
@@ -21,7 +21,7 @@ function read<T>(key: string, fallback: T): T {
 }
 
 function scheduleCloudSync() {
-  if (!cloudSyncEnabled || !supabaseEnabled) return
+  if (!cloudSyncEnabled || !firebaseEnabled) return
   if (syncTimer) window.clearTimeout(syncTimer)
   syncTimer = window.setTimeout(() => {
     const state = {
@@ -30,9 +30,9 @@ function scheduleCloudSync() {
       rivals: read<Rival[]>(KEYS.rivals, []),
     }
     void saveCloudState(state).catch(error => {
-      console.error('[BarakAPP] No se pudo sincronizar con Supabase:', error)
+      console.error('[BarakAPP] No se pudo sincronizar con Firestore:', error)
     })
-  }, 250)
+  }, 350)
 }
 
 export function enableCloudSync() {
