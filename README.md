@@ -30,9 +30,10 @@ BarakAPP no utiliza cronómetro, marcador, exclusiones ni tarjetas en la versió
 
 ## Datos centralizados
 
-Los usuarios autorizados mediante Firebase Authentication trabajan sobre los mismos datos del club. Firestore almacena:
+Los usuarios autorizados trabajan sobre los mismos datos del club. Firestore almacena:
 
 ```text
+clubs/barakaldo/members
 clubs/barakaldo/teams
 clubs/barakaldo/rivals
 clubs/barakaldo/matches
@@ -70,4 +71,4 @@ Consulta `docs/DEPLOY_SERVER.md` para el proceso completo de configuración.
 
 ## Seguridad
 
-`firestore.rules` deniega el acceso anónimo y permite leer/escribir los datos del club únicamente a usuarios autenticados. Las cuentas se crean manualmente en Firebase Console; BarakAPP no ofrece registro público.
+`firestore.rules` deniega el acceso anónimo y además exige que el UID autenticado tenga un documento en `clubs/barakaldo/members/{uid}`. Las cuentas y su autorización se gestionan manualmente desde Firebase Console.
