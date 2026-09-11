@@ -3,13 +3,15 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut as fir
 import { collection, deleteDoc, doc, getDocs, getFirestore, setDoc } from 'firebase/firestore'
 import type { Match, Rival, Team } from './types'
 
+// Firebase Web configuration is public client configuration, not an admin credential.
+// Environment variables can override these values for another Firebase project.
 const config = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyDPPoYUGsnjAboG-N_RoYL3NCXJ23RU7Bg',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'barakapp-38886.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'barakapp-38886',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'barakapp-38886.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '976158903397',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:976158903397:web:29d5625cd245926918ca8c',
 }
 
 export const firebaseEnabled = Boolean(config.apiKey && config.authDomain && config.projectId && config.appId)
