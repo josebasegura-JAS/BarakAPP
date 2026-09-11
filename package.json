@@ -2,7 +2,7 @@
   "name": "barakapp",
   "productName": "BarakAPP",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "BarakAPP - estadística de porteros de balonmano",
   "author": "BarakAPP",
   "type": "module",
@@ -16,6 +16,7 @@
     "dist:dir": "npm run build && electron-builder --dir"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
@@ -35,26 +36,13 @@
   "build": {
     "appId": "club.barakapp.desktop",
     "productName": "BarakAPP",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*",
-      "package.json"
-    ],
+    "directories": { "output": "release" },
+    "files": ["dist/**/*", "electron/**/*", "package.json"],
     "asar": true,
     "win": {
-      "target": [
-        {
-          "target": "portable",
-          "arch": ["x64"]
-        }
-      ],
+      "target": [{ "target": "portable", "arch": ["x64"] }],
       "artifactName": "BarakAPP-${version}-portable.${ext}"
     },
-    "portable": {
-      "artifactName": "BarakAPP-${version}-portable.exe"
-    }
+    "portable": { "artifactName": "BarakAPP-${version}-portable.exe" }
   }
 }
