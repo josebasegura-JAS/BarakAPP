@@ -3,7 +3,7 @@ name: Validate BarakAPP Web
 on:
   workflow_dispatch:
   push:
-    branches: [ server-pwa-supabase, main ]
+    branches: [ firebase-web, main ]
   pull_request:
     branches: [ main ]
 
