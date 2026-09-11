@@ -7,13 +7,20 @@ const KEYS = {
   rivals: 'barakapp_rivals',
 }
 
-export function loadTeams(): Team[] {
-  const raw = localStorage.getItem(KEYS.teams)
-  if (!raw) {
-    localStorage.setItem(KEYS.teams, JSON.stringify(demoTeams))
-    return demoTeams
+function read<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? (JSON.parse(raw) as T) : fallback
+  } catch {
+    return fallback
   }
-  return JSON.parse(raw) as Team[]
+}
+
+export function loadTeams(): Team[] {
+  const teams = read<Team[]>(KEYS.teams, [])
+  if (teams.length) return teams
+  localStorage.setItem(KEYS.teams, JSON.stringify(demoTeams))
+  return demoTeams
 }
 
 export function saveTeams(teams: Team[]) {
@@ -21,8 +28,7 @@ export function saveTeams(teams: Team[]) {
 }
 
 export function loadMatches(): Match[] {
-  const raw = localStorage.getItem(KEYS.matches)
-  return raw ? (JSON.parse(raw) as Match[]) : []
+  return read<Match[]>(KEYS.matches, [])
 }
 
 export function saveMatches(matches: Match[]) {
@@ -30,10 +36,15 @@ export function saveMatches(matches: Match[]) {
 }
 
 export function loadRivals(): Rival[] {
-  const raw = localStorage.getItem(KEYS.rivals)
-  return raw ? (JSON.parse(raw) as Rival[]) : []
+  return read<Rival[]>(KEYS.rivals, [])
 }
 
 export function saveRivals(rivals: Rival[]) {
   localStorage.setItem(KEYS.rivals, JSON.stringify(rivals))
+}
+
+export function replaceLocalState(state: { teams: Team[]; matches: Match[]; rivals: Rival[] }) {
+  saveTeams(state.teams)
+  saveMatches(state.matches)
+  saveRivals(state.rivals)
 }
