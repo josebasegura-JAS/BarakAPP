@@ -10,6 +10,7 @@ type Props = {
 export default function CloudGate({ children }: Props) {
   const [ready, setReady] = useState(false)
   const [authenticated, setAuthenticated] = useState(false)
+  const [entered, setEntered] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -58,6 +59,7 @@ export default function CloudGate({ children }: Props) {
       }
       autoEntered.current = true
       form.requestSubmit()
+      window.setTimeout(() => setEntered(true), 0)
     }, 0)
     return () => window.clearTimeout(timer)
   }, [authenticated, ready, email])
@@ -82,6 +84,7 @@ export default function CloudGate({ children }: Props) {
     await signOut()
     setAuthenticated(false)
     setReady(false)
+    setEntered(false)
     setPassword('')
     autoEntered.current = false
   }
@@ -109,7 +112,7 @@ export default function CloudGate({ children }: Props) {
   }
 
   return <div data-cloud-ready={ready ? 'true' : 'false'}>
-    <div style={{ opacity: autoEntered.current ? 1 : 0 }}>{children}</div>
-    <button type="button" onClick={() => void closeCloudSession()} style={{ position: 'fixed', right: 12, bottom: 12, zIndex: 50 }} className="ghost-btn">Cerrar sesión servidor</button>
+    <div style={{ opacity: entered ? 1 : 0 }}>{children}</div>
+    {entered && <button type="button" onClick={() => void closeCloudSession()} style={{ position: 'fixed', right: 12, bottom: 12, zIndex: 50 }} className="ghost-btn">Cerrar sesión</button>}
   </div>
 }
