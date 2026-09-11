@@ -49,7 +49,7 @@ export default function CloudGate({ children }: Props) {
   useEffect(() => {
     if (!authenticated || !ready || autoEntered.current) return
     const timer = window.setTimeout(() => {
-      const form = document.querySelector<HTMLFormElement>('.login-card')
+      const form = document.querySelector<HTMLFormElement>('.app-shell .login-card')
       if (!form) return
       const emailInput = form.querySelector<HTMLInputElement>('input[type="email"]')
       if (emailInput && email) {
@@ -113,6 +113,6 @@ export default function CloudGate({ children }: Props) {
 
   return <div data-cloud-ready={ready ? 'true' : 'false'}>
     <div style={{ opacity: entered ? 1 : 0 }}>{children}</div>
-    {entered && <button type="button" onClick={() => void closeCloudSession()} style={{ position: 'fixed', right: 12, bottom: 12, zIndex: 50 }} className="ghost-btn">Cerrar sesión</button>}
+    {entered && <button type="button" onClick={() => void closeCloudSession()} className="ghost-btn cloud-session-button">Cerrar sesión</button>}
   </div>
 }
