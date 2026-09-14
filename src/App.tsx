@@ -22,8 +22,8 @@ const selectableShotZones: ShotZone[] = ['ext_left', 'lat_left', 'central', 'piv
 const resultLabel: Record<ShotResult, string> = {
   goal: 'Gol',
   save: 'Parada',
-  post_out: 'Fuera/Poste',
-  blocked: 'Bloqueo',
+  post: 'Poste',
+  out: 'Fuera',
 }
 
 
@@ -241,35 +241,54 @@ function NewMatch({ team, rivals, onBack, onCreate }: { team: Team; rivals: Riva
 function LiveMatch({ team, match, onUpdate, onBack }: { team: Team; match: Match; onUpdate:(m:Match)=>void; onBack:()=>void }) {
   const [shooter, setShooter] = useState('')
   const [zone, setZone] = useState<ShotZone>('lat_left')
-  const [result, setResult] = useState<ShotResult>('save')
   const [originPoint, setOriginPoint] = useState<{x:number;y:number}|null>(null)
   const [goalPoint, setGoalPoint] = useState<{x:number;y:number}|null>(null)
+  const [editingShotId, setEditingShotId] = useState<string | null>(null)
+  const [confirmation, setConfirmation] = useState('')
   const [filterShooter, setFilterShooter] = useState('all')
   const [filterZone, setFilterZone] = useState<'all'|ShotZone>('all')
   const [mapMode, setMapMode] = useState<'traces'|'heat'>('traces')
 
   const filteredShots = match.shots.filter(s =>
-    (filterShooter === 'all' || s.shooterNumber === Number(filterShooter)) &&
-    (filterZone === 'all' || s.zone === filterZone)
+    (filterShooter === 'all' || s.opponentPlayerNumber === Number(filterShooter)) &&
+    (filterZone === 'all' || s.originZone === filterZone)
   )
-  const uniqueShooters = [...new Set(match.shots.map(s => s.shooterNumber))].sort((a,b)=>a-b)
+  const uniqueShooters = [...new Set(match.shots.map(s => s.opponentPlayerNumber))].sort((a,b)=>a-b)
   const saves = filteredShots.filter(s=>s.result==='save').length
   const goals = filteredShots.filter(s=>s.result==='goal').length
   const onTarget = saves + goals
   const savePct = onTarget ? Math.round((saves / onTarget) * 100) : 0
   const currentGoalkeeper = team.goalkeepers.find(g => g.id === match.goalkeeperId)
 
-  function saveShot() {
+  function saveShot(result: ShotResult) {
     if(!shooter || !goalPoint || !originPoint || !match.goalkeeperId) return
+    const originZone = zoneFromOrigin(originPoint.x, originPoint.y)
+    const previous = match.shots.find(item => item.id === editingShotId)
     const shot: Shot={
-      id:uid(), matchId:match.id, shooterNumber:Number(shooter), zone,
+      id:editingShotId ?? uid(), matchId:match.id, opponentPlayerNumber:Number(shooter),
       originX:originPoint.x, originY:originPoint.y,
-      goalX:goalPoint.x, goalY:goalPoint.y, result,
-      goalkeeperId:match.goalkeeperId
+      targetX:goalPoint.x, targetY:goalPoint.y, result,
+      goalkeeperId:match.goalkeeperId,
+      timestampCreated: previous?.timestampCreated ?? new Date().toISOString(),
+      originZone,
+      goalZone: goalZoneFromTarget(goalPoint.x, goalPoint.y),
+      shotDistance: distanceFromOrigin(originPoint.y),
+      shotType: distanceFromOrigin(originPoint.y) === 'seven_m' ? 'seven_m' : 'open_play',
     }
-    onUpdate({ ...match, shots:[...match.shots,shot] })
+    onUpdate({ ...match, shots: editingShotId ? match.shots.map(item => item.id === editingShotId ? shot : item) : [...match.shots,shot] })
+    setConfirmation(editingShotId ? 'Lanzamiento corregido' : `${resultLabel[result]} registrado`)
+    window.setTimeout(() => setConfirmation(''), 900)
+    setEditingShotId(null)
     setGoalPoint(null)
     setOriginPoint(null)
+  }
+
+  function editShot(shot: Shot) {
+    setEditingShotId(shot.id)
+    setShooter(String(shot.opponentPlayerNumber))
+    setOriginPoint({x:shot.originX,y:shot.originY})
+    setGoalPoint({x:shot.targetX,y:shot.targetY})
+    setZone(shot.originZone)
   }
 
   function undo() {
@@ -327,7 +346,7 @@ function LiveMatch({ team, match, onUpdate, onBack }: { team: Team; match: Match
 
       <main className="panel visual-stage shots-visual-stage">
         <div className="visual-toolbar shots-visual-toolbar">
-          <div><div className="eyebrow">Registrar lanzamiento</div><h2>Selecciona origen y destino</h2><p>Primero toca el punto de lanzamiento en la pista y después el punto de llegada en la portería.</p></div>
+          <div><div className="eyebrow">{editingShotId ? 'Corrigiendo lanzamiento' : 'Registrar lanzamiento'}</div><h2>Selecciona origen y destino</h2><p>Toca pista, portería y resultado. Se guarda automáticamente.</p></div>
           <div className="view-switch"><button className={mapMode==='traces'?'active':''} onClick={()=>setMapMode('traces')}>Trazas</button><button className={mapMode==='heat'?'active':''} onClick={()=>setMapMode('heat')}>Calor</button></div>
         </div>
 
@@ -347,9 +366,9 @@ function LiveMatch({ team, match, onUpdate, onBack }: { team: Team; match: Match
           <div><span>Portero</span><strong>{currentGoalkeeper?`#${currentGoalkeeper.number}`:'Selecciona portero'}</strong></div>
         </div>
 
-        <div className="shot-controls shots-controls">
-          <div className="result-inline">{(Object.keys(resultLabel) as ShotResult[]).map(r=><button key={r} className={`${result===r?'selected ':''}${r}`} onClick={()=>setResult(r)}>{resultLabel[r]}</button>)}</div>
-          <button className="primary-btn save-shot" disabled={!shooter||!goalPoint||!originPoint||!match.goalkeeperId} onClick={saveShot}>Guardar lanzamiento</button>
+        <div className="shot-controls shots-controls auto-save-controls">
+          <div className="result-inline">{(Object.keys(resultLabel) as ShotResult[]).map(r=><button key={r} className={r} disabled={!shooter||!goalPoint||!originPoint||!match.goalkeeperId} onClick={()=>saveShot(r)}>{resultLabel[r]}</button>)}</div>
+          {confirmation && <div className="shot-confirmation" role="status">✓ {confirmation}</div>}
         </div>
       </main>
 
@@ -361,6 +380,13 @@ function LiveMatch({ team, match, onUpdate, onBack }: { team: Team; match: Match
           <div className="rail-title"><Target size={18}/><h2>Filtrar lanzamientos</h2></div>
           <div className="filters stacked"><label>Jugador<select value={filterShooter} onChange={e=>setFilterShooter(e.target.value)}><option value="all">Todos los jugadores</option>{uniqueShooters.map(n=><option key={n} value={n}>Jugador #{n}</option>)}</select></label><label>Zona de origen<select value={filterZone} onChange={e=>setFilterZone(e.target.value as 'all'|ShotZone)}><option value="all">Todas las zonas</option>{selectableShotZones.map(z=><option key={z} value={z}>{zoneLabel[z]}</option>)}</select></label></div>
           <button className="reset-filters" onClick={()=>{setFilterShooter('all');setFilterZone('all')}}>Limpiar filtros</button>
+        </section>
+        <section className="panel shot-history">
+          <div className="rail-title"><Pencil size={18}/><h2>Historial</h2></div>
+          {match.shots.length === 0 ? <div className="empty">Sin lanzamientos.</div> : <div className="history-list">{[...match.shots].reverse().slice(0, 12).map(shot => <div className={`history-shot ${editingShotId === shot.id ? 'editing' : ''}`} key={shot.id}>
+            <button className="history-main" onClick={() => editShot(shot)}><strong>#{shot.opponentPlayerNumber} · {resultLabel[shot.result]}</strong><small>{zoneLabel[shot.originZone]} · {new Date(shot.timestampCreated).toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'})}</small></button>
+            <button className="icon-btn danger-icon" title="Eliminar lanzamiento" onClick={() => onUpdate({...match, shots: match.shots.filter(item => item.id !== shot.id)})}><Trash2 size={15}/></button>
+          </div>)}</div>}
         </section>
       </aside>
     </div>
@@ -376,6 +402,19 @@ function zoneFromOrigin(x:number, y:number): ShotZone {
   return 'ext_right'
 }
 
+function distanceFromOrigin(y: number): Shot['shotDistance'] {
+  if (y < 43) return 'six_m'
+  if (y < 58) return 'seven_m'
+  if (y < 82) return 'nine_m'
+  return 'long'
+}
+
+function goalZoneFromTarget(x: number, y: number) {
+  const column = x < 33.33 ? 'left' : x < 66.66 ? 'center' : 'right'
+  const row = y < 50 ? 'high' : 'low'
+  return `${row}_${column}`
+}
+
 const SHOT_IMAGE = { width: 1338, height: 1176 }
 const SHOT_COURT_RECT = { x: 73, y: 326, w: 1192, h: 850 }
 const SHOT_GOAL_PLANE = { x: 430, y: 121, w: 438, h: 205 }
@@ -384,12 +423,12 @@ function shotOriginSvgPoint(shot: Shot) {
   const fallback: Record<ShotZone,{x:number;y:number}> = {
     ext_left:{x:9,y:61}, lat_left:{x:29,y:72}, central:{x:50,y:82}, lat_right:{x:71,y:72}, ext_right:{x:91,y:61}, pivot:{x:50,y:48}, seven_m:{x:50,y:48}
   }
-  const p = shot.originX == null || shot.originY == null ? fallback[shot.zone] : {x:shot.originX,y:shot.originY}
+  const p = shot.originX == null || shot.originY == null ? fallback[shot.originZone] : {x:shot.originX,y:shot.originY}
   return {x:SHOT_COURT_RECT.x+(p.x/100)*SHOT_COURT_RECT.w, y:SHOT_COURT_RECT.y+(p.y/100)*SHOT_COURT_RECT.h}
 }
 
 function shotGoalSvgPoint(shot: Shot) {
-  return {x:SHOT_GOAL_PLANE.x+(shot.goalX/100)*SHOT_GOAL_PLANE.w, y:SHOT_GOAL_PLANE.y+(shot.goalY/100)*SHOT_GOAL_PLANE.h}
+  return {x:SHOT_GOAL_PLANE.x+(shot.targetX/100)*SHOT_GOAL_PLANE.w, y:SHOT_GOAL_PLANE.y+(shot.targetY/100)*SHOT_GOAL_PLANE.h}
 }
 
 function ShotCourt({ shots, draftOrigin, draftGoal, mapMode, onOriginPick, onGoalPick }: {
@@ -443,7 +482,7 @@ function ShotCourt({ shots, draftOrigin, draftGoal, mapMode, onOriginPick, onGoa
           {mapMode === 'heat' && <><circle cx={o.x} cy={o.y} r="70" className="heat-origin"/><circle cx={g.x} cy={g.y} r="48" className="heat-target"/></>}
           <circle cx={o.x} cy={o.y} r="12" className="origin-dot"/>
           <circle cx={g.x} cy={g.y} r="10" className="target-dot"/>
-          <text x={o.x + 17} y={o.y - 15} className="court-shot-number">#{s.shooterNumber}</text>
+          <text x={o.x + 17} y={o.y - 15} className="court-shot-number">#{s.opponentPlayerNumber}</text>
         </g>
       })}
 
@@ -451,7 +490,7 @@ function ShotCourt({ shots, draftOrigin, draftGoal, mapMode, onOriginPick, onGoa
       {draftGoalSvg && <g className="draft-marker goal-draft"><circle cx={draftGoalSvg.x} cy={draftGoalSvg.y} r="16"/><text x={draftGoalSvg.x + 22} y={draftGoalSvg.y - 17}>DESTINO</text></g>}
       {draftOriginSvg && draftGoalSvg && <line x1={draftOriginSvg.x} y1={draftOriginSvg.y} x2={draftGoalSvg.x} y2={draftGoalSvg.y} className="draft-trace"/>}
     </svg>
-    <div className="court-legend"><span><i className="legend-dot save"></i>Parada</span><span><i className="legend-dot goal"></i>Gol</span><span><i className="legend-dot post_out"></i>Fuera/Poste</span><span><i className="legend-dot blocked"></i>Bloqueo</span></div>
+    <div className="court-legend"><span><i className="legend-dot save"></i>Parada</span><span><i className="legend-dot goal"></i>Gol</span><span><i className="legend-dot post"></i>Poste</span><span><i className="legend-dot out"></i>Fuera</span></div>
   </div>
 }
 
