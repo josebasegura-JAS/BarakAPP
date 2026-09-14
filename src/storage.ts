@@ -25,18 +25,49 @@ function categoryIdFromName(name: string) {
   return `cat-${name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`
 }
 
+function normalizeTeams(teams: Team[]): Team[] {
+  return teams.map(team => {
+    const categoryId = team.categoryId || categoryIdFromName(team.category)
+    return {
+      ...team,
+      categoryId,
+      active: team.active !== false,
+      goalkeepers: (team.goalkeepers ?? []).map(goalkeeper => ({
+        ...goalkeeper,
+        teamId: goalkeeper.teamId || team.id,
+        categoryId: goalkeeper.categoryId || categoryId,
+        active: goalkeeper.active !== false,
+      })),
+      players: team.players ?? [],
+    }
+  })
+}
+
 function categoriesFromTeams(teams: Team[]): Category[] {
-  const names = [...new Set(teams.map(team => team.category.trim()).filter(Boolean))]
-  return names.sort((a, b) => a.localeCompare(b, 'es')).map(name => ({ id: categoryIdFromName(name), name }))
+  const map = new Map<string, Category>()
+  for (const team of normalizeTeams(teams)) {
+    const id = team.categoryId || categoryIdFromName(team.category)
+    if (!map.has(id)) map.set(id, { id, name: team.category, active: true })
+  }
+  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'es'))
+}
+
+function normalizeCategories(categories: Category[], teams: Team[]): Category[] {
+  const defaults = categoriesFromTeams(teams)
+  const map = new Map(defaults.map(category => [category.id, category]))
+  for (const category of categories) {
+    map.set(category.id, { ...category, active: category.active !== false })
+  }
+  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'es'))
 }
 
 function scheduleCloudSync() {
   if (!cloudSyncEnabled || !firebaseEnabled) return
   if (syncTimer) window.clearTimeout(syncTimer)
   syncTimer = window.setTimeout(() => {
-    const teams = read<Team[]>(KEYS.teams, [])
+    const teams = normalizeTeams(read<Team[]>(KEYS.teams, []))
     const state = {
-      categories: read<Category[]>(KEYS.categories, categoriesFromTeams(teams)),
+      categories: normalizeCategories(read<Category[]>(KEYS.categories, []), teams),
       teams,
       matches: read<Match[]>(KEYS.matches, []),
       rivals: read<Rival[]>(KEYS.rivals, []),
@@ -57,27 +88,27 @@ export function disableCloudSync() {
 }
 
 export function loadCategories(): Category[] {
-  const stored = read<Category[]>(KEYS.categories, [])
-  if (stored.length) return stored
-  const categories = categoriesFromTeams(loadTeams())
+  const teams = loadTeams()
+  const categories = normalizeCategories(read<Category[]>(KEYS.categories, []), teams)
   localStorage.setItem(KEYS.categories, JSON.stringify(categories))
   return categories
 }
 
 export function saveCategories(categories: Category[]) {
-  localStorage.setItem(KEYS.categories, JSON.stringify(categories))
+  const normalized = normalizeCategories(categories, loadTeams())
+  localStorage.setItem(KEYS.categories, JSON.stringify(normalized))
   scheduleCloudSync()
 }
 
 export function loadTeams(): Team[] {
-  const teams = read<Team[]>(KEYS.teams, [])
-  if (teams.length) return teams
-  localStorage.setItem(KEYS.teams, JSON.stringify(demoTeams))
-  return demoTeams
+  const stored = read<Team[]>(KEYS.teams, [])
+  const teams = normalizeTeams(stored.length ? stored : demoTeams)
+  localStorage.setItem(KEYS.teams, JSON.stringify(teams))
+  return teams
 }
 
 export function saveTeams(teams: Team[]) {
-  localStorage.setItem(KEYS.teams, JSON.stringify(teams))
+  localStorage.setItem(KEYS.teams, JSON.stringify(normalizeTeams(teams)))
   scheduleCloudSync()
 }
 
@@ -100,9 +131,10 @@ export function saveRivals(rivals: Rival[]) {
 }
 
 export function replaceLocalState(state: { categories?: Category[]; teams: Team[]; matches: Match[]; rivals: Rival[] }) {
-  localStorage.setItem(KEYS.teams, JSON.stringify(state.teams))
+  const teams = normalizeTeams(state.teams)
+  localStorage.setItem(KEYS.teams, JSON.stringify(teams))
   localStorage.setItem(KEYS.matches, JSON.stringify(state.matches))
   localStorage.setItem(KEYS.rivals, JSON.stringify(state.rivals))
-  const categories = state.categories?.length ? state.categories : categoriesFromTeams(state.teams)
+  const categories = normalizeCategories(state.categories ?? [], teams)
   localStorage.setItem(KEYS.categories, JSON.stringify(categories))
 }
