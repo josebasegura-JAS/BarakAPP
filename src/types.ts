@@ -9,10 +9,16 @@ export type ShotZone =
   | 'pivot'
   | 'seven_m'
 
+export interface Category {
+  id: string
+  name: string
+}
+
 export interface Team {
   id: string
   name: string
   category: string
+  categoryId?: string
   season: string
   goalkeepers: Goalkeeper[]
   players: Player[]
