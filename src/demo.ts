@@ -5,11 +5,13 @@ export const demoTeams: Team[] = [
     id: 'team-senior',
     name: 'Barakaldo Senior',
     category: 'Liga Vasca',
+    categoryId: 'cat-liga-vasca',
     season: '2026/27',
+    active: true,
     goalkeepers: [
-      { id: 'gk-1', number: 1, name: 'A. Gómez' },
-      { id: 'gk-16', number: 16, name: 'D. Martín' },
-      { id: 'gk-99', number: 99, name: 'B. Sánchez' },
+      { id: 'gk-1', number: 1, name: 'A. Gómez', teamId: 'team-senior', categoryId: 'cat-liga-vasca', active: true },
+      { id: 'gk-16', number: 16, name: 'D. Martín', teamId: 'team-senior', categoryId: 'cat-liga-vasca', active: true },
+      { id: 'gk-99', number: 99, name: 'B. Sánchez', teamId: 'team-senior', categoryId: 'cat-liga-vasca', active: true },
     ],
     players: [
       { id: 'p4', number: 4, name: 'Jugador 4' },
@@ -23,10 +25,12 @@ export const demoTeams: Team[] = [
     id: 'team-cadete',
     name: 'Barakaldo Cadete',
     category: 'Cadete',
+    categoryId: 'cat-cadete',
     season: '2026/27',
+    active: true,
     goalkeepers: [
-      { id: 'gk-c1', number: 1, name: 'Portero 1' },
-      { id: 'gk-c12', number: 12, name: 'Portero 12' },
+      { id: 'gk-c1', number: 1, name: 'Portero 1', teamId: 'team-cadete', categoryId: 'cat-cadete', active: true },
+      { id: 'gk-c12', number: 12, name: 'Portero 12', teamId: 'team-cadete', categoryId: 'cat-cadete', active: true },
     ],
     players: [
       { id: 'cp5', number: 5, name: 'Jugador 5' },
