@@ -45,12 +45,16 @@ export default function ClubAdmin({ onClose }: { onClose: () => void }) {
       setMessage('Esa categoría ya existe.')
       return
     }
-    const category = { id: uid(), name }
+    const category: Category = { id: uid(), name, active: true }
     persistCategories([...categories, category].sort((a, b) => a.name.localeCompare(b.name, 'es')))
     setSelectedCategoryId(category.id)
     setSelectedTeamId('')
     setCategoryName('')
     setMessage('')
+  }
+
+  function toggleCategory(category: Category) {
+    persistCategories(categories.map(item => item.id === category.id ? { ...item, active: !item.active } : item))
   }
 
   function removeCategory(category: Category) {
@@ -83,6 +87,7 @@ export default function ClubAdmin({ onClose }: { onClose: () => void }) {
       category: selectedCategory.name,
       categoryId: selectedCategory.id,
       season: season.trim() || '2026/27',
+      active: true,
       goalkeepers: [],
       players: [],
     }
@@ -90,6 +95,10 @@ export default function ClubAdmin({ onClose }: { onClose: () => void }) {
     setSelectedTeamId(team.id)
     setTeamName('')
     setMessage('')
+  }
+
+  function toggleTeam(team: Team) {
+    persistTeams(teams.map(item => item.id === team.id ? { ...item, active: !item.active } : item))
   }
 
   function removeTeam(team: Team) {
@@ -102,8 +111,14 @@ export default function ClubAdmin({ onClose }: { onClose: () => void }) {
     if (selectedTeamId === team.id) setSelectedTeamId('')
   }
 
+  function resetGoalkeeperForm() {
+    setGoalkeeperName('')
+    setGoalkeeperNumber('')
+    setEditingGoalkeeperId(null)
+  }
+
   function saveGoalkeeper() {
-    if (!selectedTeam) return
+    if (!selectedTeam || !selectedCategory) return
     const name = goalkeeperName.trim()
     const number = Number(goalkeeperNumber)
     if (!name || !Number.isInteger(number) || number < 0 || number > 99) {
@@ -116,15 +131,22 @@ export default function ClubAdmin({ onClose }: { onClose: () => void }) {
     }
     let goalkeepers: Goalkeeper[]
     if (editingGoalkeeperId) {
-      goalkeepers = selectedTeam.goalkeepers.map(goalkeeper => goalkeeper.id === editingGoalkeeperId ? { ...goalkeeper, name, number } : goalkeeper)
+      goalkeepers = selectedTeam.goalkeepers.map(goalkeeper => goalkeeper.id === editingGoalkeeperId
+        ? { ...goalkeeper, name, number, teamId: selectedTeam.id, categoryId: selectedCategory.id }
+        : goalkeeper)
     } else {
-      goalkeepers = [...selectedTeam.goalkeepers, { id: uid(), name, number }]
+      goalkeepers = [...selectedTeam.goalkeepers, {
+        id: uid(),
+        name,
+        number,
+        teamId: selectedTeam.id,
+        categoryId: selectedCategory.id,
+        active: true,
+      }]
     }
     goalkeepers.sort((a, b) => a.number - b.number)
     persistTeams(teams.map(team => team.id === selectedTeam.id ? { ...team, goalkeepers } : team))
-    setGoalkeeperName('')
-    setGoalkeeperNumber('')
-    setEditingGoalkeeperId(null)
+    resetGoalkeeperForm()
     setMessage('')
   }
 
@@ -135,21 +157,29 @@ export default function ClubAdmin({ onClose }: { onClose: () => void }) {
     setMessage('')
   }
 
+  function toggleGoalkeeper(goalkeeper: Goalkeeper) {
+    if (!selectedTeam) return
+    persistTeams(teams.map(team => team.id === selectedTeam.id
+      ? { ...team, goalkeepers: team.goalkeepers.map(item => item.id === goalkeeper.id ? { ...item, active: !item.active } : item) }
+      : team))
+  }
+
   function removeGoalkeeper(goalkeeper: Goalkeeper) {
     if (!selectedTeam) return
     const used = matches.some(match => match.teamId === selectedTeam.id && (match.goalkeeperId === goalkeeper.id || match.shots.some(shot => shot.goalkeeperId === goalkeeper.id)))
     if (used) {
-      setMessage('No puedes eliminar un portero que ya tiene lanzamientos asociados.')
+      setMessage('No puedes eliminar un portero que ya tiene lanzamientos asociados. Déjalo inactivo para conservar el histórico.')
       return
     }
     if (!confirm(`¿Eliminar a #${goalkeeper.number} ${goalkeeper.name}?`)) return
     persistTeams(teams.map(team => team.id === selectedTeam.id ? { ...team, goalkeepers: team.goalkeepers.filter(item => item.id !== goalkeeper.id) } : team))
+    if (editingGoalkeeperId === goalkeeper.id) resetGoalkeeperForm()
   }
 
   return <div className="club-admin-overlay">
     <section className="club-admin-shell">
       <div className="club-admin-topbar">
-        <div><div className="eyebrow">Configuración del club</div><h1>Equipos y porteros</h1></div>
+        <div><div className="eyebrow">Configuración del club</div><h1>Categorías, equipos y porteros</h1></div>
         <button className="ghost-btn" onClick={onClose}><X size={17}/> Volver a BarakAPP</button>
       </div>
 
@@ -159,8 +189,9 @@ export default function ClubAdmin({ onClose }: { onClose: () => void }) {
         <section className="panel club-admin-panel">
           <div className="panel-title"><h2><Users size={18}/> Categorías</h2></div>
           <div className="club-admin-list">
-            {categories.map(category => <div key={category.id} className={`club-admin-row ${selectedCategoryId === category.id ? 'active' : ''}`}>
+            {categories.map(category => <div key={category.id} className={`club-admin-row ${selectedCategoryId === category.id ? 'active' : ''} ${category.active ? '' : 'is-inactive'}`}>
               <button onClick={() => { setSelectedCategoryId(category.id); setSelectedTeamId(''); setMessage('') }}><strong>{category.name}</strong><small>{teams.filter(team => team.categoryId === category.id || (!team.categoryId && team.category === category.name)).length} equipos</small></button>
+              <button className={`status-pill ${category.active ? 'on' : 'off'}`} onClick={() => toggleCategory(category)}>{category.active ? 'Activa' : 'Inactiva'}</button>
               <button className="icon-btn danger-icon" onClick={() => removeCategory(category)} title="Eliminar categoría"><Trash2 size={15}/></button>
             </div>)}
           </div>
@@ -171,8 +202,9 @@ export default function ClubAdmin({ onClose }: { onClose: () => void }) {
           <div className="panel-title"><h2>Equipos {selectedCategory ? `· ${selectedCategory.name}` : ''}</h2></div>
           {!selectedCategory ? <div className="empty">Crea o selecciona una categoría.</div> : <>
             <div className="club-admin-list">
-              {teamsInCategory.map(team => <div key={team.id} className={`club-admin-row ${selectedTeamId === team.id ? 'active' : ''}`}>
-                <button onClick={() => { setSelectedTeamId(team.id); setMessage('') }}><strong>{team.name}</strong><small>{team.season} · {team.goalkeepers.length} porteros</small></button>
+              {teamsInCategory.map(team => <div key={team.id} className={`club-admin-row ${selectedTeamId === team.id ? 'active' : ''} ${team.active ? '' : 'is-inactive'}`}>
+                <button onClick={() => { setSelectedTeamId(team.id); setMessage('') }}><strong>{team.name}</strong><small>{team.season} · {team.goalkeepers.filter(goalkeeper => goalkeeper.active).length}/{team.goalkeepers.length} porteros activos</small></button>
+                <button className={`status-pill ${team.active ? 'on' : 'off'}`} onClick={() => toggleTeam(team)}>{team.active ? 'Activo' : 'Inactivo'}</button>
                 <button className="icon-btn danger-icon" onClick={() => removeTeam(team)} title="Eliminar equipo"><Trash2 size={15}/></button>
               </div>)}
             </div>
@@ -184,9 +216,15 @@ export default function ClubAdmin({ onClose }: { onClose: () => void }) {
           <div className="panel-title"><h2><Shield size={18}/> Porteros {selectedTeam ? `· ${selectedTeam.name}` : ''}</h2></div>
           {!selectedTeam ? <div className="empty">Selecciona un equipo para gestionar sus porteros.</div> : <>
             <div className="club-admin-list goalkeeper-admin-list">
-              {selectedTeam.goalkeepers.map(goalkeeper => <div key={goalkeeper.id} className="club-admin-row goalkeeper-admin-row"><span className="admin-gk-number">{goalkeeper.number}</span><button className="goalkeeper-copy" onClick={() => editGoalkeeper(goalkeeper)}><strong>{goalkeeper.name}</strong><small>Dorsal {goalkeeper.number}</small></button><button className="icon-btn" onClick={() => editGoalkeeper(goalkeeper)} title="Editar"><Pencil size={15}/></button><button className="icon-btn danger-icon" onClick={() => removeGoalkeeper(goalkeeper)} title="Eliminar"><Trash2 size={15}/></button></div>)}
+              {selectedTeam.goalkeepers.map(goalkeeper => <div key={goalkeeper.id} className={`club-admin-row goalkeeper-admin-row ${goalkeeper.active ? '' : 'is-inactive'}`}>
+                <span className="admin-gk-number">{goalkeeper.number}</span>
+                <button className="goalkeeper-copy" onClick={() => editGoalkeeper(goalkeeper)}><strong>{goalkeeper.name}</strong><small>{goalkeeper.active ? 'Disponible para partidos' : 'Inactivo · conserva histórico'}</small></button>
+                <button className={`status-pill ${goalkeeper.active ? 'on' : 'off'}`} onClick={() => toggleGoalkeeper(goalkeeper)}>{goalkeeper.active ? 'Activo' : 'Inactivo'}</button>
+                <button className="icon-btn" onClick={() => editGoalkeeper(goalkeeper)} title="Editar"><Pencil size={15}/></button>
+                <button className="icon-btn danger-icon" onClick={() => removeGoalkeeper(goalkeeper)} title="Eliminar"><Trash2 size={15}/></button>
+              </div>)}
             </div>
-            <div className="club-admin-create stacked-create"><input value={goalkeeperName} onChange={event => setGoalkeeperName(event.target.value)} placeholder="Nombre del portero"/><input value={goalkeeperNumber} onChange={event => setGoalkeeperNumber(event.target.value.replace(/\D/g, '').slice(0, 2))} inputMode="numeric" placeholder="Dorsal"/><button className="primary-btn compact" onClick={saveGoalkeeper}><Save size={16}/> {editingGoalkeeperId ? 'Guardar' : 'Dar de alta'}</button>{editingGoalkeeperId && <button className="ghost-btn" onClick={() => { setEditingGoalkeeperId(null); setGoalkeeperName(''); setGoalkeeperNumber('') }}><ArrowLeft size={15}/> Cancelar edición</button>}</div>
+            <div className="club-admin-create stacked-create"><input value={goalkeeperName} onChange={event => setGoalkeeperName(event.target.value)} placeholder="Nombre del portero"/><input value={goalkeeperNumber} onChange={event => setGoalkeeperNumber(event.target.value.replace(/\D/g, '').slice(0, 2))} inputMode="numeric" placeholder="Dorsal"/><button className="primary-btn compact" onClick={saveGoalkeeper}><Save size={16}/> {editingGoalkeeperId ? 'Guardar' : 'Dar de alta'}</button>{editingGoalkeeperId && <button className="ghost-btn" onClick={resetGoalkeeperForm}><ArrowLeft size={15}/> Cancelar edición</button>}</div>
           </>}
         </section>
       </div>
