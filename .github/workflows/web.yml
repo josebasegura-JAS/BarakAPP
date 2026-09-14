@@ -5,7 +5,7 @@ on:
   push:
     branches: [ firebase-web, main ]
   pull_request:
-    branches: [ main ]
+    branches: [ firebase-web, main ]
 
 jobs:
   build-web:
