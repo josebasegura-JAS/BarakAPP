@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { firebaseEnabled, loadCloudState, observeAuth, saveCloudState, signIn, signOut } from './firebase'
-import { disableCloudSync, enableCloudSync, loadMatches, loadRivals, loadTeams, replaceLocalState } from './storage'
+import { disableCloudSync, enableCloudSync, loadCategories, loadMatches, loadRivals, loadTeams, replaceLocalState } from './storage'
 
 type Props = { children: ReactNode }
 
@@ -21,7 +21,7 @@ export default function CloudGate({ children }: Props) {
     if (remote) {
       replaceLocalState(remote)
     } else {
-      await saveCloudState({ teams: loadTeams(), matches: loadMatches(), rivals: loadRivals() })
+      await saveCloudState({ categories: loadCategories(), teams: loadTeams(), matches: loadMatches(), rivals: loadRivals() })
     }
     enableCloudSync()
     setEmail(userEmail)
