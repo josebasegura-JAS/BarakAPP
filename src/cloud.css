@@ -48,7 +48,7 @@
 
 .club-admin-columns {
   display: grid;
-  grid-template-columns: minmax(240px, .8fr) minmax(300px, 1fr) minmax(360px, 1.2fr);
+  grid-template-columns: minmax(240px, .8fr) minmax(300px, 1fr) minmax(390px, 1.25fr);
   gap: 16px;
   align-items: start;
 }
@@ -79,6 +79,10 @@
   background: rgba(240,196,0,.07);
 }
 
+.club-admin-row.is-inactive {
+  opacity: .58;
+}
+
 .club-admin-row > button:first-child,
 .goalkeeper-copy {
   flex: 1;
@@ -101,6 +105,28 @@
   margin-top: 3px;
 }
 
+.status-pill {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.status-pill.on {
+  color: #bff3d7;
+  border-color: rgba(75, 190, 130, .32);
+  background: rgba(75, 190, 130, .12);
+}
+
+.status-pill.off {
+  color: #c9cdd0;
+  border-color: rgba(255, 255, 255, .13);
+  background: rgba(255, 255, 255, .05);
+}
+
 .club-admin-create {
   display: flex;
   gap: 8px;
@@ -118,11 +144,17 @@
 
 .goalkeeper-admin-row {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) auto auto;
+  grid-template-columns: 48px minmax(0, 1fr) auto auto auto;
 }
 
 .club-admin-message {
   margin-bottom: 14px;
+}
+
+/* El mapa de pista/portería debe permanecer visualmente limpio: sin etiquetas. */
+.court-shot-number,
+.draft-marker text {
+  display: none;
 }
 
 @media (max-width: 1050px) {
@@ -146,5 +178,12 @@
   .club-admin-topbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .goalkeeper-admin-row {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+  }
+  .goalkeeper-admin-row .status-pill {
+    grid-column: 2;
+    justify-self: start;
   }
 }
