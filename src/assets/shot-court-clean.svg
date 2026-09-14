@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1338 1176" role="img" aria-label="Pista y portería de balonmano sin textos">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#171c20"/>
+      <stop offset="1" stop-color="#0f1316"/>
+    </linearGradient>
+    <linearGradient id="court" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4b8a69"/>
+      <stop offset="1" stop-color="#2f6f55"/>
+    </linearGradient>
+    <linearGradient id="goalFloor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#346e57"/>
+      <stop offset="1" stop-color="#245d48"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#000" flood-opacity=".36"/>
+    </filter>
+    <pattern id="net" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M0 0L24 24M24 0L0 24" stroke="#d9dee1" stroke-width="1.2" stroke-opacity=".42"/>
+    </pattern>
+  </defs>
+
+  <rect width="1338" height="1176" fill="url(#bg)"/>
+
+  <g filter="url(#shadow)">
+    <rect x="73" y="326" width="1192" height="850" rx="20" fill="url(#court)"/>
+  </g>
+
+  <rect x="73" y="326" width="1192" height="850" rx="20" fill="none" stroke="#f5f7f8" stroke-width="7"/>
+
+  <path d="M300 326 C300 520 393 650 669 650 C945 650 1038 520 1038 326" fill="url(#goalFloor)" stroke="#f5f7f8" stroke-width="8"/>
+  <path d="M226 326 C226 610 372 790 669 790 C966 790 1112 610 1112 326" fill="none" stroke="#e9eef0" stroke-width="6" stroke-dasharray="26 20" opacity=".96"/>
+
+  <g filter="url(#shadow)">
+    <rect x="430" y="121" width="438" height="205" fill="#0f1214" stroke="#f7f7f7" stroke-width="14" rx="4"/>
+    <rect x="444" y="135" width="410" height="177" fill="url(#net)"/>
+    <rect x="430" y="121" width="55" height="14" fill="#d71920"/>
+    <rect x="540" y="121" width="55" height="14" fill="#d71920"/>
+    <rect x="650" y="121" width="55" height="14" fill="#d71920"/>
+    <rect x="760" y="121" width="55" height="14" fill="#d71920"/>
+    <rect x="430" y="121" width="14" height="52" fill="#d71920"/>
+    <rect x="430" y="225" width="14" height="52" fill="#d71920"/>
+    <rect x="854" y="121" width="14" height="52" fill="#d71920"/>
+    <rect x="854" y="225" width="14" height="52" fill="#d71920"/>
+  </g>
+
+  <path d="M430 326L485 312M868 326L813 312" stroke="#dce2e5" stroke-width="5" opacity=".6"/>
+  <rect x="72" y="325" width="1194" height="2" fill="#ffffff" opacity=".65"/>
+</svg>
