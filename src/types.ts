@@ -1,4 +1,4 @@
-export type ShotResult = 'goal' | 'save' | 'post_out' | 'blocked'
+export type ShotResult = 'goal' | 'save' | 'post' | 'out'
 
 export type ShotZone =
   | 'ext_left'
@@ -34,14 +34,18 @@ export interface Rival {
 export interface Shot {
   id: string
   matchId: string
-  shooterNumber: number
-  zone: ShotZone
-  originX?: number
-  originY?: number
-  goalX: number
-  goalY: number
+  opponentPlayerNumber: number
+  originX: number
+  originY: number
+  targetX: number
+  targetY: number
   result: ShotResult
   goalkeeperId: string
+  timestampCreated: string
+  originZone: ShotZone
+  goalZone: string
+  shotDistance: 'six_m' | 'seven_m' | 'nine_m' | 'long'
+  shotType: 'open_play' | 'seven_m'
 }
 
 export interface Match {
