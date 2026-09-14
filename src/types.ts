@@ -33,9 +33,9 @@ export interface Player {
 }
 
 export interface Goalkeeper extends Player {
-  teamId: string
-  categoryId: string
-  active: boolean
+  teamId?: string
+  categoryId?: string
+  active?: boolean
 }
 
 export interface Rival {
