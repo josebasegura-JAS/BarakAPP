@@ -12,6 +12,7 @@ export type ShotZone =
 export interface Category {
   id: string
   name: string
+  active: boolean
 }
 
 export interface Team {
@@ -20,6 +21,7 @@ export interface Team {
   category: string
   categoryId?: string
   season: string
+  active: boolean
   goalkeepers: Goalkeeper[]
   players: Player[]
 }
@@ -30,7 +32,11 @@ export interface Player {
   name: string
 }
 
-export interface Goalkeeper extends Player {}
+export interface Goalkeeper extends Player {
+  teamId: string
+  categoryId: string
+  active: boolean
+}
 
 export interface Rival {
   id: string
