@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, type User } from 'firebase/auth'
 import { collection, deleteDoc, doc, getDocs, getFirestore, setDoc } from 'firebase/firestore'
-import type { Match, Rival, Team } from './types'
+import type { Category, Match, Rival, Team } from './types'
 
 // Firebase Web configuration is public client configuration, not an admin credential.
 // Environment variables can override these values for another Firebase project.
@@ -21,7 +21,7 @@ const auth = app ? getAuth(app) : null
 const db = app ? getFirestore(app) : null
 const CLUB_ID = 'barakaldo'
 
-export type CloudState = { teams: Team[]; matches: Match[]; rivals: Rival[] }
+export type CloudState = { categories: Category[]; teams: Team[]; matches: Match[]; rivals: Rival[] }
 
 export function observeAuth(callback: (user: User | null) => void) {
   if (!auth) return () => undefined
@@ -46,13 +46,14 @@ async function readCollection<T>(name: string): Promise<T[]> {
 
 export async function loadCloudState(): Promise<CloudState | null> {
   if (!db) throw new Error('Firestore no está configurado.')
-  const [teams, matches, rivals] = await Promise.all([
+  const [categories, teams, matches, rivals] = await Promise.all([
+    readCollection<Category>('categories'),
     readCollection<Team>('teams'),
     readCollection<Match>('matches'),
     readCollection<Rival>('rivals'),
   ])
-  if (!teams.length && !matches.length && !rivals.length) return null
-  return { teams, matches, rivals }
+  if (!categories.length && !teams.length && !matches.length && !rivals.length) return null
+  return { categories, teams, matches, rivals }
 }
 
 async function syncCollection<T extends { id: string }>(name: string, items: T[]) {
@@ -66,6 +67,7 @@ async function syncCollection<T extends { id: string }>(name: string, items: T[]
 
 export async function saveCloudState(state: CloudState) {
   await Promise.all([
+    syncCollection('categories', state.categories),
     syncCollection('teams', state.teams),
     syncCollection('matches', state.matches),
     syncCollection('rivals', state.rivals),
